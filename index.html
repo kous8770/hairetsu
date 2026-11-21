@@ -1,0 +1,1788 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#e8467c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="アイカツ配列">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<title>アイカツ!アンコール 配列トラッカー</title>
+<script>
+/* 表示テーマ(自動/ライト/ダーク)。画面が一瞬白くならないよう、描画前に決める */
+function resolveTheme(t) { return t === 'dark' || (t !== 'light' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; }
+try { var _ui = (JSON.parse(localStorage.getItem('aikatsuHairetsu.v1')) || {}).ui || {}; document.documentElement.dataset.theme = resolveTheme(_ui.theme); } catch (e) { document.documentElement.dataset.theme = resolveTheme('auto'); }
+</script>
+<style>
+:root{
+  --accent:#e8467c;--accent-d:#c2305f;--accent-l:#ffe3ee;--head:#e8467c;
+  --bg:#f6f2f7;--card:#fff;--surface:#fff;--surface2:#f1eef3;--field:#f7f4f8;
+  --ink:#222;--sub:#6b6470;--line:#e0d8e3;--chipline:#bbb;
+  --N:#ffffff;--R:#d0d0d0;--PR:#ffe45c;--ER:#9fe0ff;--PRs:#ff9fd0;--ERs:#bf9bff;
+  --rink:#222;--rsub:#444;--rowline:rgba(0,0,0,.12);
+  --warn-bg:#fff4d6;--warn-line:#f0c94a;--ok:#18794e;--ng:#c0262d;--blue:#1769a8;--blue-bg:#dff1ff;
+  --tabh:56px;color-scheme:light;
+}
+/* ダーク：レアリティの色は同じ系統のまま暗くし、文字を明るくする */
+:root[data-theme="dark"]{
+  --accent:#e8467c;--accent-d:#ff8fb6;--accent-l:#4a2235;--head:#8f2a52;
+  --bg:#141117;--card:#211d25;--surface:#211d25;--surface2:#2c2731;--field:#2c2731;
+  --ink:#ece8f0;--sub:#a59fae;--line:#3b3541;--chipline:#5d5666;
+  --N:#2d2932;--R:#4c4a53;--PR:#7c6812;--ER:#16607f;--PRs:#8f3367;--ERs:#5c46a0;
+  --rink:#f2eef5;--rsub:#d2cbd9;--rowline:rgba(255,255,255,.09);
+  --warn-bg:#3b3015;--warn-line:#7a6420;--ok:#4cc38a;--ng:#ff6b6b;--blue:#62b5f2;--blue-bg:#16324a;
+  color-scheme:dark;
+}
+:root[data-theme="dark"] .thumb img{filter:brightness(.92)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",Meiryo,sans-serif;
+  -webkit-text-size-adjust:100%;font-size:15px}
+body{padding-bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 8px)}
+html{touch-action:manipulation}
+button,select,input{font:inherit;color:inherit}
+/* iPhone は 16px 未満の入力欄をタップすると画面を拡大するので 16px にそろえる */
+input,select,textarea{font-size:16px!important}
+button,[data-act]{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+small{font-size:.8em}
+.hint{color:var(--sub);font-size:13px;margin:6px 0}
+.warn{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:8px;padding:6px 8px;font-size:13px;margin:6px 0}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:9px;background:var(--accent-l);color:var(--accent-d);margin-left:4px;vertical-align:1px;font-weight:600}
+.tag.blue{background:var(--blue-bg);color:var(--blue)}
+.tag.gray{background:var(--surface2);color:var(--sub)}
+
+/* 色(レアリティ) */
+.r-N{background:var(--N)}.r-R{background:var(--R)}.r-PR{background:var(--PR)}
+.r-ER{background:var(--ER)}.r-PRs{background:var(--PRs)}.r-ERs{background:var(--ERs)}
+.r-N,.r-R,.r-PR,.r-ER,.r-PRs,.r-ERs{color:var(--rink)}
+
+/* 上部 */
+#sticky{position:sticky;top:0;z-index:30;background:var(--bg);box-shadow:0 1px 0 var(--line)}
+header{display:flex;align-items:center;gap:6px;padding:6px 8px;padding-top:calc(6px + env(safe-area-inset-top));background:var(--head);color:#fff}
+header h1{font-size:14px;margin:0;line-height:1.1;flex:0 0 auto}
+header select{flex:1 1 auto;min-width:0;height:34px;border:0;border-radius:8px;padding:0 6px;background:var(--surface);color:var(--ink);font-size:14px}
+.hbtn{flex:0 0 auto;height:34px;min-width:40px;padding:0 8px;border:0;border-radius:8px;background:rgba(255,255,255,.22);color:#fff;font-size:14px;font-weight:600}
+.hbtn:active{background:rgba(255,255,255,.4)}
+
+#next{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 8px 4px}
+.np{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:5px;min-width:0}
+.np.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.np-h{display:flex;align-items:center;gap:3px;min-height:30px}
+.np-h b{font-size:13px;white-space:nowrap}
+.np-h .st{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--accent-d);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step{flex:0 0 auto;width:32px;height:30px;padding:0;border:1px solid var(--line);border-radius:7px;background:var(--surface);font-size:13px;font-weight:700}
+.step:active{background:var(--accent-l)}
+.np-cards{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:3px;align-items:end;margin-top:3px}
+.nc{min-width:0;text-align:center}
+.nc .thumb{border-width:2px}
+.nc.first .thumb{box-shadow:0 0 0 2px var(--accent)}
+.nc-l{font-size:10px;color:var(--sub);line-height:1.3}
+.nc.first .nc-l{color:var(--accent-d);font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-top:3px}
+.stats div{border-radius:5px;text-align:center;font-size:10px;line-height:1.2;padding:2px 0;border:1px solid var(--line)}
+.stats b{display:block;font-size:12px}
+.nstar{display:flex;align-items:center;gap:4px;margin-top:3px;padding:3px;border-radius:6px;color:var(--rink);min-width:0}
+.nstar .thumb{flex:0 0 26px;border-width:1px}
+.nstar .thumb .star{font-size:12px}
+.nstar .thumb .mtxt{font-size:7px}
+.nstar .ns-t{flex:1;min-width:0;line-height:1.2}
+.nstar .ns-1{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nstar .ns-2{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nstar .ns-d{flex:0 0 auto;font-size:10px;text-align:center;line-height:1.1}
+.nstar .ns-d b{display:block;font-size:15px}
+.nstar.none{font-size:11px;color:var(--sub);border:1px dashed var(--line);justify-content:center;padding:6px 3px}
+.np-un{font-size:12px;color:var(--sub);padding:6px 2px;min-height:60px}
+.np-un .big{font-size:13px;color:var(--ink);font-weight:600}
+.np-end{font-size:12px;padding:6px 2px;text-align:center}
+
+/* カード画像 */
+.thumb{position:relative;aspect-ratio:5/7;border-radius:5px;overflow:hidden;border:1px solid var(--chipline);background:var(--surface2)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .fb{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;font-size:11px;font-weight:700;line-height:1.3}
+.thumb.noimg .fb{display:flex}
+.thumb.noimg img{display:none}
+.thumb .star{position:absolute;top:0;right:2px;color:#ff1f84;font-size:20px;line-height:1;text-shadow:0 0 2px #fff,0 0 4px #fff,0 0 1px #fff}
+.thumb.multi{display:flex;align-items:center;justify-content:center;text-align:center}
+.thumb .mtxt{font-size:10px;font-weight:700;line-height:1.25;padding:2px}
+
+/* 入力バー */
+#inbar{display:flex;gap:6px;padding:0 8px 6px}
+.seg{flex:1;height:44px;border:2px solid var(--line);background:var(--surface);border-radius:10px;font-weight:700;font-size:15px;line-height:1.05;padding:0 4px}
+.seg small{display:block;font-weight:400;font-size:11px;color:var(--sub)}
+.seg.on{border-color:var(--accent);background:var(--accent);color:#fff}
+.seg.on small{color:#ffe3ee}
+#starBtn{flex:0 0 64px;height:44px;border:2px solid var(--line);background:var(--surface);border-radius:10px;font-weight:700;font-size:14px}
+#starBtn.on{background:var(--PRs);border-color:#e0559c;color:var(--rink)}
+#padBtn{flex:0 0 64px;height:44px;border:2px solid var(--line);background:var(--surface);border-radius:10px;font-weight:700;font-size:14px;line-height:1.05}
+#padBtn small{font-size:10px}
+#padBtn.on{background:var(--accent-l);border-color:var(--accent);color:var(--accent-d)}
+
+/* テンキー */
+#pad{position:fixed;left:0;right:0;bottom:calc(var(--tabh) + env(safe-area-inset-bottom));z-index:45;background:var(--surface);border-top:2px solid var(--accent);box-shadow:0 -4px 12px rgba(0,0,0,.12);padding:6px 8px 8px}
+body.padopen{padding-bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 290px)}
+body.padopen #toast{bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 290px)}
+.pad-top{display:flex;align-items:center;gap:8px;min-height:62px}
+#padPrev{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
+#padPrev .thumb{flex:0 0 42px}
+#padPrev .pv-no{font-size:26px;font-weight:800;letter-spacing:1px;min-width:2.2em}
+#padPrev .pv-nm{font-size:13px;line-height:1.3;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#padPrev .pv-side{font-size:11px;color:var(--sub)}
+.pad-x{flex:0 0 auto;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px}
+.pad-keys{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pad-keys button{height:48px;border:1px solid var(--line);border-radius:10px;background:var(--field);font-size:22px;font-weight:700}
+.pad-keys button:active{background:var(--accent-l)}
+.pad-keys .fn{background:var(--surface2);font-size:18px}
+.pad-keys .w2{grid-column:span 2}
+.pad-keys .ok{background:var(--accent);border-color:var(--accent);color:#fff;font-size:18px}
+.pad-keys .ok:disabled{background:var(--surface2);border-color:var(--line);color:var(--sub)}
+#padStar.on{background:var(--PRs);color:var(--rink)}
+
+main{padding:8px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px}
+.box h3{margin:0 0 6px;font-size:15px}
+.btn{min-height:40px;padding:6px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-weight:600;font-size:14px}
+.btn:active{background:var(--accent-l)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--ng);border-color:var(--ng)}
+.btn.sm{min-height:32px;padding:3px 10px;font-size:13px}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+
+/* 特定パネル */
+.ib-h{display:flex;align-items:center;gap:4px;font-weight:700;font-size:14px}
+.recent{display:flex;flex-wrap:wrap;gap:3px;margin:6px 0}
+.echip{display:inline-block;font-size:12px;padding:2px 6px;border-radius:6px;border:1px solid var(--chipline);font-weight:600;white-space:nowrap;color:var(--rink)}
+.echip.wild{background:var(--surface2);color:var(--sub);border-style:dashed}
+.echip.bad{outline:2px solid #e23b3b}
+.ib-st{font-size:15px;font-weight:700;margin:6px 0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ib-st.ok{color:var(--ok)}
+.cands{display:flex;flex-direction:column;gap:5px;margin-top:6px}
+.cand{display:flex;align-items:center;gap:6px;min-height:44px;padding:4px 10px;text-align:left;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:14px}
+.cand b{font-size:17px}
+.cand .go{margin-left:auto;font-size:12px;color:var(--accent-d);font-weight:700;white-space:nowrap}
+.cand:active{background:var(--accent-l)}
+.cand.prio{border-color:var(--accent)}
+
+/* 絞り込み・グリッド */
+.filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 8px}
+.chip{min-width:44px;height:36px;padding:0 10px;border:1px solid var(--chipline);border-radius:18px;color:var(--rink);font-weight:700;font-size:13px;background:var(--surface)}
+.chip.on{outline:3px solid var(--accent);outline-offset:-1px}
+.filters input{flex:1 1 150px;min-width:0;height:38px;border:1px solid var(--line);border-radius:9px;padding:0 10px;background:var(--surface)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px}
+.tile{display:block;padding:3px;border:1px solid var(--line);border-radius:8px;background:var(--surface);text-align:center;min-width:0}
+.tile:active{transform:scale(.96);background:var(--accent-l)}
+.tile.dis{opacity:.35}
+.tile .tl{display:block;font-size:12px;margin-top:2px;white-space:nowrap}
+.tile .tl i{font-style:normal;font-size:10px;padding:0 4px;border-radius:4px;border:1px solid var(--chipline)}
+.tile .tn{display:block;font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 配列表 */
+.tctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.tctl select{height:38px;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:0 6px;font-size:13px}
+.btn.on{background:var(--accent-l);border-color:var(--accent);color:var(--accent-d)}
+.thead,.tcols{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.th{background:var(--surface);border:1px solid var(--line);border-radius:9px 9px 0 0;padding:4px;min-width:0}
+.th .tr{display:flex;gap:4px;align-items:center}
+.th b{font-size:13px;white-space:nowrap}
+.th select{flex:1;min-width:0;height:34px;border:1px solid var(--line);border-radius:7px;background:var(--surface);font-size:14px;font-weight:700}
+.th .ts{font-size:11px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tcol{position:relative;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;background:var(--surface);height:400px;min-width:0}
+.row{display:flex;align-items:center;height:42px;border-bottom:1px solid var(--rowline);padding:0 3px 0 0;position:relative;cursor:pointer;color:var(--rink)}
+.row .p{flex:0 0 26px;text-align:center;font-size:11px;font-weight:700;color:var(--rsub)}
+.row .c{flex:1;min-width:0;line-height:1.2}
+.row .l1{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .l2{font-size:10px;color:var(--rsub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .rt{font-size:10px;font-weight:700;color:var(--rink)}
+.row.out{filter:grayscale(1);opacity:.38}
+.row.nextc{box-shadow:inset 0 0 0 3px var(--accent);z-index:1}
+.row.nextc .p{color:var(--accent-d)}
+.row.nextc .p::before{content:"▶";display:block;font-size:9px;line-height:1}
+.row.cand::after{content:"候補";position:absolute;right:2px;top:2px;font-size:9px;font-weight:700;color:#fff;background:var(--blue);border-radius:4px;padding:0 3px}
+.row.cand{box-shadow:inset 0 0 0 2px var(--blue)}
+.row.dim{background:var(--surface2)!important}
+.row.dim .c{opacity:.35}
+.row .mk{flex:0 0 auto;font-size:12px;font-weight:700;margin-left:2px}
+.row .mk.ok{color:var(--ok)}.row .mk.ng{color:var(--ng)}
+.row.empty{background:var(--surface2);cursor:default}
+
+/* 検索 */
+#q{width:100%;height:46px;border:2px solid var(--line);border-radius:10px;padding:0 12px;font-size:17px;background:var(--surface)}
+.sc{display:flex;gap:10px;align-items:flex-start}
+.sc .thumb{flex:0 0 96px}
+.ptable{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+.ptable th,.ptable td{border-bottom:1px solid var(--line);padding:7px 4px;text-align:left;vertical-align:top}
+.ptable th{white-space:nowrap;width:4.5em}
+.ptable .none{color:var(--sub)}
+.slist{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;margin-top:8px}
+
+/* 記録 */
+.elist{list-style:none;padding:0;margin:6px 0 0;max-height:360px;overflow:auto}
+.elist li{display:flex;align-items:center;gap:6px;padding:5px 2px;border-bottom:1px solid var(--line);font-size:13px}
+.elist .ep{flex:0 0 52px;color:var(--sub);font-size:12px}
+.elist .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.elist .x{flex:0 0 36px;height:32px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ng)}
+details.box summary{font-weight:600;font-size:14px;cursor:pointer}
+
+/* 設定 */
+.form{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;margin:8px 0;padding:8px;border:1px dashed var(--line);border-radius:9px}
+.form label{display:flex;align-items:center;gap:6px;font-size:14px}
+.form input,.form select{flex:1;min-width:0;height:38px;border:1px solid var(--line);border-radius:8px;padding:0 8px;background:var(--surface)}
+#setBox ul{padding-left:1.2em;margin:4px 0;font-size:13px;line-height:1.6}
+
+/* タブバー */
+#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:grid;grid-template-columns:repeat(6,1fr);height:calc(var(--tabh) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--surface);border-top:1px solid var(--line)}
+#tabbar button{border:0;background:none;font-size:12px;padding:0;font-weight:700;color:var(--sub);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+#tabbar button i{font-style:normal;font-size:18px;line-height:1}
+#tabbar button.on{color:var(--accent)}
+
+/* トースト・シート */
+#toast{position:fixed;left:50%;bottom:calc(var(--tabh) + env(safe-area-inset-bottom) + 10px);transform:translateX(-50%);z-index:60;max-width:calc(100% - 24px);background:rgba(30,20,35,.92);color:#fff;padding:9px 14px;border-radius:12px;font-size:14px;line-height:1.4;opacity:0;pointer-events:none;transition:opacity .2s;text-align:center}
+#toast.show{opacity:1}
+.sheet{position:fixed;inset:0;z-index:70}
+.sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.4)}
+.sheet-p{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-radius:16px 16px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom));max-height:80vh;overflow:auto}
+.sheet-p .btn{width:100%;margin-top:8px;min-height:48px;font-size:15px}
+/* 期待値 */
+.evt{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+.evt th,.evt td{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.evt th:first-child,.evt td:first-child{text-align:left}
+.evt thead th{font-size:11px;color:var(--sub);font-weight:600}
+.evt tr.best td{background:var(--accent-l);font-weight:700}
+.evt .neg{color:var(--ng)}.evt .pos{color:var(--ok)}
+.bar{display:inline-block;height:8px;border-radius:4px;background:var(--PRs);vertical-align:middle;margin-right:4px}
+.evf{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 8px;align-items:center;font-size:14px}
+.evf input,.evf select{height:38px;border:1px solid var(--line);border-radius:8px;padding:0 8px;background:var(--surface);width:7.5em;text-align:right}
+.evf select{text-align:left;width:auto}
+.evf .u{font-size:12px;color:var(--sub);margin-left:2px}
+.prow{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line)}
+.prow .thumb{flex:0 0 30px}
+.prow .nm{flex:1;min-width:0;font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow input{width:7em;height:38px;border:1px solid var(--line);border-radius:8px;padding:0 8px;background:var(--surface);text-align:right}
+.nst{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.nst > div{border:1px solid var(--line);border-radius:9px;padding:6px;font-size:13px;line-height:1.45}
+body.nodata #next,body.nodata #inbar,body.nodata main,body.nodata #tabbar,body.nodata header .hbtn,body.nodata #machineSel{display:none!important}
+#nodataBox{margin:12px}
+#selftest{white-space:pre-wrap;font-size:12px;background:var(--surface);border:2px solid #333;margin:8px;padding:8px}
+</style>
+</head>
+<body>
+<div id="sticky">
+  <header>
+    <h1>アイカツ!<br>配列</h1>
+    <select id="machineSel" aria-label="店舗・筐体"></select>
+    <button class="hbtn" data-act="undo" title="元に戻す">↶戻す</button>
+    <button class="hbtn" data-act="togglenext" id="nextToggle" title="上の表示をたたむ">▲</button>
+  </header>
+  <div id="next"></div>
+  <div id="inbar">
+    <button class="seg" data-act="side" data-side="L">左筒<small id="inL"></small></button>
+    <button class="seg" data-act="side" data-side="R">右筒<small id="inR"></small></button>
+    <button id="starBtn" data-act="star">★<br><small>パラレル</small></button>
+    <button id="padBtn" data-act="pad">⌨<br><small>テンキー</small></button>
+  </div>
+</div>
+
+<main>
+  <section class="tab" id="tab-input">
+    <div class="box" id="identBox"></div>
+    <div class="filters">
+      <div id="rarChips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+      <input id="kw" type="search" enterkeyhint="done" placeholder="番号・名前で絞り込み(1枚ならEnterで記録)" autocomplete="off">
+    </div>
+    <div id="grid" class="grid"></div>
+  </section>
+
+  <section class="tab" id="tab-table" hidden>
+    <div class="tctl">
+      <button class="btn sm" id="syncBtn" data-act="sync"></button>
+      <button class="btn sm" id="alignBtn" data-act="align"></button>
+      <select id="rowFilter" aria-label="表示する枠">
+        <option value="all">すべて表示</option>
+        <option value="R">R以上だけ</option>
+        <option value="PR">PR以上だけ</option>
+        <option value="ER">ER・★だけ</option>
+      </select>
+      <button class="btn sm" data-act="jump">目印へ</button>
+    </div>
+    <div class="thead"><div class="th" id="thL"></div><div class="th" id="thR"></div></div>
+    <div class="tcols"><div class="tcol" id="colL"></div><div class="tcol" id="colR"></div></div>
+  </section>
+
+  <section class="tab" id="tab-search" hidden>
+    <input id="q" type="search" placeholder="例：29 / 1-29 / E1-29 / 35★ / 名前" autocomplete="off">
+    <div id="sres"></div>
+  </section>
+
+  <section class="tab" id="tab-ev" hidden>
+    <div id="evRes"></div>
+    <div id="evForm"></div>
+  </section>
+
+  <section class="tab" id="tab-log" hidden>
+    <div id="logBox"></div>
+  </section>
+
+  <section class="tab" id="tab-settings" hidden>
+    <div id="setBox"></div>
+  </section>
+</main>
+
+<nav id="tabbar">
+  <button data-act="tab" data-tab="input"><i>✚</i>入力</button>
+  <button data-act="tab" data-tab="table"><i>☰</i>配列表</button>
+  <button data-act="tab" data-tab="search"><i>⌕</i>検索</button>
+  <button data-act="tab" data-tab="ev"><i>¥</i>期待値</button>
+  <button data-act="tab" data-tab="log"><i>⏱</i>記録</button>
+  <button data-act="tab" data-tab="settings"><i>⚙</i>設定</button>
+</nav>
+
+<div id="pad" hidden>
+  <div class="pad-top"><div id="padPrev"></div><button class="pad-x" data-act="pad" aria-label="テンキーを閉じる">閉じる</button></div>
+  <div class="pad-keys">
+    <button data-act="pk" data-k="7">7</button><button data-act="pk" data-k="8">8</button><button data-act="pk" data-k="9">9</button><button data-act="pk" data-k="bs" class="fn">⌫</button>
+    <button data-act="pk" data-k="4">4</button><button data-act="pk" data-k="5">5</button><button data-act="pk" data-k="6">6</button><button data-act="pk" data-k="c" class="fn">C</button>
+    <button data-act="pk" data-k="1">1</button><button data-act="pk" data-k="2">2</button><button data-act="pk" data-k="3">3</button><button data-act="star" class="fn" id="padStar">★</button>
+    <button data-act="pk" data-k="0" class="w2">0</button><button data-act="pk" data-k="ok" class="w2 ok" id="padOk">記録</button>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="sheet" class="sheet" hidden><div class="sheet-bg" data-act="closesheet"></div><div class="sheet-p" id="sheetP"></div></div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+
+<!-- 配列データ。embed_data.py で埋め込み直す(手で書き換えない) -->
+<!-- サーバー用だけ：パスワードで暗号化した配列データ(encrypt_data.mjs が入れる) -->
+<script id="enc-data" type="application/json">{"v":1,"salt":"itLGtpzkDIu8zwr+98MtdQ==","iter":600000,"iv":"BNkJ0YyqjbpdgELb","ct":"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"}</script>
+<script id="builtin-data" type="application/json">
+{"sets":[]}
+</script>
+
+<script>
+/* エラーを画面に出す(スマホでは開発者ツールが見られないため)。帯をタップで消える */
+(function () {
+  function show(msg) {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99;background:#c0262d;color:#fff;font-size:12px;padding:6px 8px;white-space:pre-wrap;word-break:break-all';
+    d.textContent = '⚠ エラー(この帯の内容を伝えてください。タップで消えます)\n' + msg;
+    d.onclick = function () { d.remove(); };
+    (document.body || document.documentElement).appendChild(d);
+  }
+  window.addEventListener('error', function (e) { show((e.message || e) + '\n' + (e.lineno ? '行 ' + e.lineno + ':' + e.colno : '') + '\n' + navigator.userAgent); });
+  window.addEventListener('unhandledrejection', function (e) { show('Promise: ' + (e.reason && e.reason.stack || e.reason)); });
+})();
+</script>
+<script>
+'use strict';
+/* =========================================================
+   基本
+   ========================================================= */
+const LS_KEY = 'aikatsuHairetsu.v1';
+const LS_UNDO = 'aikatsuHairetsu.undo.v1';
+const LS_DATA = 'aikatsuHairetsu.data.v1';
+const SIDE = { L: '左筒', R: '右筒' };
+const OTHER = { L: 'R', R: 'L' };
+const RANK = { N: 0, R: 1, PR: 2, ER: 3, 'PR★': 4, 'ER★': 5 };
+const UNDO_MAX = 30;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function parseJSON(s) { try { return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function norm(s) {
+  return String(s || '').normalize('NFKC').toLowerCase()
+    .replace(/[ぁ-ゖ]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60));
+}
+function fmtTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/* =========================================================
+   データ(弾ごと)
+   ========================================================= */
+const BUILTIN = parseJSON(document.getElementById('builtin-data').textContent) || { sets: [] };
+let dataOverride = parseJSON(lsGet(LS_DATA)) || {};   // { 'E1': {title,notes,cards,arrays} }
+let SETS = {};
+
+function prepareSet(raw, id) {
+  const cards = (raw.cards || []).map(c => ({ no: c.no, name: c.name, rarity: c.rarity, image: c.image || '' }));
+  const byNo = {};
+  cards.forEach(c => byNo[c.no] = c);
+  const arrays = (raw.arrays || []).map(a => ({ id: a.id, name: a.name || ('配列' + a.id), slots: a.slots.map(s => s.slice()) }));
+  const starNos = new Set();
+  arrays.forEach(a => a.slots.forEach(s => s.forEach(k => { if (k.endsWith('★')) starNos.add(k.slice(0, -1)); })));
+  return { id, title: raw.title || id, notes: raw.notes || [], cards, byNo, arrays, starNos };
+}
+function setToRaw(set) {
+  return {
+    title: set.title, notes: set.notes, refPrices: set.ref || undefined,
+    cards: set.cards.map(c => ({ no: c.no, name: c.name, rarity: c.rarity, image: c.image })),
+    arrays: set.arrays.map(a => ({ id: a.id, name: a.name, slots: a.slots.map(s => s.slice()) }))
+  };
+}
+function buildSets() {
+  SETS = {};
+  for (const s of BUILTIN.sets) {
+    const ov = dataOverride[s.id];
+    SETS[s.id] = prepareSet(ov || s, s.id);
+    SETS[s.id].ref = (ov && ov.refPrices) || s.refPrices || null;     // 買取価格の参考
+  }
+  for (const id in dataOverride) if (!SETS[id]) {
+    SETS[id] = prepareSet(dataOverride[id], id);
+    SETS[id].ref = dataOverride[id].refPrices || null;
+  }
+}
+buildSets();
+const firstSetId = () => Object.keys(SETS)[0];
+
+function splitKey(k) { return k && k.endsWith('★') ? { no: k.slice(0, -1), star: true } : { no: k, star: false }; }
+function shortNo(k) { return String(k).replace(/^E\d+-/, ''); }
+function keyRarity(set, k) {
+  const { no, star } = splitKey(k);
+  const c = set.byNo[no];
+  const r = c ? c.rarity : '?';
+  return star ? r + '★' : r;
+}
+function rcls(r) { return 'r-' + String(r).replace('★', 's'); }
+function rvar(r) { return 'var(--' + String(r).replace('★', 's') + ',#eee)'; }
+function slotRarities(set, slot) { return [...new Set(slot.map(k => keyRarity(set, k)))]; }
+function bgStyle(rs) {
+  if (rs.length <= 1) return 'background:' + rvar(rs[0]);
+  const step = 100 / rs.length;
+  return 'background:linear-gradient(90deg,' + rs.map((r, i) => `${rvar(r)} ${i * step}% ${(i + 1) * step}%`).join(',') + ')';
+}
+function getArr(set, id) { return set.arrays.find(a => a.id === id) || null; }
+function pairId(set, id) {
+  if (id == null) return null;
+  const p = id % 2 === 1 ? id + 1 : id - 1;
+  return set.arrays.some(a => a.id === p) ? p : null;
+}
+function slotLabel(set, slot) {
+  return slot.length === 1 ? slot[0] : '《ランダム》' + (slot.length <= 4 ? slot.join('/') : slot.length + '種');
+}
+/* 「29」「1-29」「E1-29」「35★」→ {no:'E1-29', star} */
+function parseCardNo(q, defSet) {
+  const s = String(q || '').normalize('NFKC').replace(/[ー－―‐−–—~〜]/g, '-').replace(/\s+/g, '').toUpperCase();
+  const m = s.match(/^(?:E?(\d{1,2})-)?E?(\d{1,3})([★*☆])?$/);
+  if (!m) return null;
+  const prefix = m[1] ? 'E' + parseInt(m[1], 10) : (defSet || 'E1');
+  return { no: prefix + '-' + String(parseInt(m[2], 10)).padStart(2, '0'), star: !!m[3] };
+}
+
+/* =========================================================
+   状態(店舗・筐体ごと)
+   ========================================================= */
+function newTube(arrayId) { return { arrayId, confirmed: false, pos: 0, entries: [], fresh: false, history: [], cyl: 1 }; }
+function newMachine(name, setId) {
+  return { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, setId, tubes: { L: newTube(1), R: newTube(2) } };
+}
+function fixMachine(m) {
+  if (!m.tubes) m.tubes = { L: newTube(1), R: newTube(2) };
+  for (const s of ['L', 'R']) {
+    const t = m.tubes[s] = Object.assign(newTube(s === 'L' ? 1 : 2), m.tubes[s] || {});
+    if (!Array.isArray(t.entries)) t.entries = [];
+    if (!Array.isArray(t.history)) t.history = [];
+  }
+  if (!SETS[m.setId]) m.setId = firstSetId();
+  return m;
+}
+let store = parseJSON(lsGet(LS_KEY));
+if (!store || !Array.isArray(store.machines) || !store.machines.length) {
+  const m = newMachine('店舗1', firstSetId());
+  store = { machines: [m], cur: m.id, ui: {} };
+}
+store.machines.forEach(fixMachine);
+store.ui = Object.assign({ tab: 'input', side: 'L', sync: true, align: 'marker', theme: 'auto', rowFilter: 'all', rarF: [], starMode: false, nextOpen: true, allCands: false }, store.ui || {});
+let undoMap = parseJSON(lsGet(LS_UNDO)) || {};
+
+function M() { return store.machines.find(x => x.id === store.cur) || store.machines[0]; }
+function S(m) { return SETS[m.setId] || SETS[firstSetId()]; }
+
+let saveWarned = false;
+function save() {
+  const ok = lsSet(LS_KEY, JSON.stringify(store)) && lsSet(LS_UNDO, JSON.stringify(undoMap));
+  if (!ok && !saveWarned) { saveWarned = true; toast('この端末に保存できませんでした(プライベートモードなど)'); }
+}
+/* 状態を変える操作はすべてここを通す(取り消しのため) */
+function mutate(label, fn) {
+  const m = M();
+  const snap = JSON.stringify(m);
+  const msg = fn(m);
+  if (msg === false) return;            // 何も変えなかった
+  (undoMap[m.id] = undoMap[m.id] || []).push({ label, snap });
+  if (undoMap[m.id].length > UNDO_MAX) undoMap[m.id].shift();
+  save();
+  render();
+  if (msg) toast(msg);
+}
+function undo() {
+  const st = undoMap[M().id];
+  if (!st || !st.length) { toast('元に戻せる操作はありません'); return; }
+  const { label, snap } = st.pop();
+  const restored = fixMachine(JSON.parse(snap));
+  const i = store.machines.findIndex(x => x.id === restored.id);
+  if (i >= 0) store.machines[i] = restored;
+  save(); render(true);
+  toast('元に戻しました：' + label);
+}
+
+/* =========================================================
+   配列の特定
+   ========================================================= */
+function entryKey(e) { return e && e.no ? e.no + (e.star ? '★' : '') : null; }
+/* 記録の並び → [{off, key}](key=null は「不明な1枚」)。確定中に付いた枚数目(pos)があれば間隔に使う */
+function seqFromEntries(entries) {
+  const seq = [];
+  let off = -1, prevPos = null;
+  for (const e of entries) {
+    if (prevPos != null && e.pos != null && e.pos > prevPos) off += e.pos - prevPos; else off += 1;
+    seq.push({ off, key: entryKey(e) });
+    prevPos = e.pos != null ? e.pos : null;
+  }
+  return seq;
+}
+/* 12配列のすべての位置に当てはめる。maxMis は許す不一致の枚数 */
+function findMatches(set, entries, maxMis) {
+  const seq = seqFromEntries(entries);
+  if (!seq.length) return [];
+  const span = seq[seq.length - 1].off + 1;
+  const res = [];
+  for (const a of set.arrays) {
+    const L = a.slots.length;
+    for (let s = 0; s + span <= L; s++) {
+      let mis = 0, ok = true;
+      for (const q of seq) {
+        if (!q.key) continue;
+        if (!a.slots[s + q.off].includes(q.key)) { if (++mis > maxMis) { ok = false; break; } }
+      }
+      if (ok) res.push({ arrayId: a.id, start: s + 1, end: s + span, mis });
+    }
+  }
+  return res;
+}
+function identify(m, side) {
+  const set = S(m), t = m.tubes[side], o = m.tubes[OTHER[side]];
+  const known = t.entries.filter(e => e.no).length;
+  const pairOf = o.confirmed ? pairId(set, o.arrayId) : null;
+  if (!known) return { exact: [], near: [], known, pairOf };
+  const exact = findMatches(set, t.entries, 0);
+  let near = [];
+  if (!exact.length && known >= 3) {
+    const mx = known >= 6 ? 2 : 1;
+    near = findMatches(set, t.entries, mx);
+  }
+  for (const c of exact.concat(near)) {
+    c.pair = c.arrayId === pairOf;
+    c.first = c.start === 1;
+    c.prio = (t.fresh && c.first ? 0 : 2) + (c.pair ? 0 : 1);
+  }
+  const cmp = (a, b) => a.mis - b.mis || a.prio - b.prio || a.arrayId - b.arrayId || a.end - b.end;
+  exact.sort(cmp); near.sort(cmp);
+  return { exact, near: near.slice(0, 12), nearTotal: near.length, known, pairOf };
+}
+/* 自動で決めてよい候補(1つに決まった/新しい筒で1枚目からの一致が1つ) */
+function autoPick(m, side, r) {
+  const t = m.tubes[side];
+  if (t.confirmed || !r.exact.length) return null;
+  if (r.exact.length === 1) return r.exact[0];
+  if (t.fresh) {
+    const f = r.exact.filter(c => c.first);
+    if (f.length === 1) return f[0];
+  }
+  return null;
+}
+function mismatches(m, side) {
+  const set = S(m), t = m.tubes[side], arr = getArr(set, t.arrayId);
+  if (!t.confirmed || !arr) return [];
+  return t.entries.filter(e => e.no && e.pos != null && e.pos >= 1 && e.pos <= arr.slots.length && !arr.slots[e.pos - 1].includes(entryKey(e)));
+}
+
+/* ---- 状態を変える中身(テストからも呼ぶ) ---- */
+function coreConfirm(m, side, arrayId, end) {
+  const set = S(m), t = m.tubes[side];
+  const seq = seqFromEntries(t.entries);
+  const lastOff = seq.length ? seq[seq.length - 1].off : 0;
+  t.entries.forEach((e, i) => { const p = end - (lastOff - seq[i].off); e.pos = p >= 1 ? p : undefined; });
+  t.arrayId = arrayId; t.confirmed = true; t.pos = end; t.fresh = false;
+  const o = m.tubes[OTHER[side]];
+  if (!o.confirmed && !o.entries.length) { const p = pairId(set, arrayId); if (p) o.arrayId = p; }
+}
+function autoIdentify(m, side) {
+  const r = identify(m, side);
+  const pick = autoPick(m, side, r);
+  if (pick) { coreConfirm(m, side, pick.arrayId, pick.end); return `${SIDE[side]}：配列${pick.arrayId}の${pick.end}枚目に特定しました`; }
+  if (r.exact.length) return `${SIDE[side]}：候補 ${r.exact.length}件`;
+  if (r.near.length) return `${SIDE[side]}：完全に一致する並びなし(近い候補 ${r.nearTotal}件)`;
+  return `${SIDE[side]}：一致する並びがありません`;
+}
+function coreNextCyl(m, side) {
+  const t = m.tubes[side];
+  t.history.push({ cyl: t.cyl, arrayId: t.arrayId, confirmed: t.confirmed, pos: t.pos, entries: t.entries, ended: Date.now() });
+  t.cyl += 1; t.entries = []; t.pos = 0; t.confirmed = false; t.fresh = true;
+  return `${SIDE[side]}：第${t.cyl}筒に切り替えました。1枚目から特定し直します`;
+}
+function coreRecord(m, side, no, star) {
+  const set = S(m), t = m.tubes[side];
+  let pre = '';
+  let arr = getArr(set, t.arrayId);
+  if (t.confirmed && arr && t.pos >= arr.slots.length) { coreNextCyl(m, side); pre = '100枚目まで出たので次の筒に切り替えました。'; }
+  const e = { no, star: !!star, ts: Date.now() };
+  const key = entryKey(e);
+  if (t.confirmed && arr) {
+    t.pos += 1; e.pos = t.pos; t.entries.push(e);
+    const slot = arr.slots[t.pos - 1];
+    if (slot.includes(key)) return pre + `${SIDE[side]} ${t.pos}枚目：${key}`;
+    return pre + `⚠ ${SIDE[side]}の${t.pos}枚目は ${slotLabel(set, slot)} のはずです。記録と配列が合いません`;
+  }
+  t.entries.push(e);
+  return pre + autoIdentify(m, side);
+}
+function coreStep(m, side, d) {
+  const set = S(m), t = m.tubes[side], arr = getArr(set, t.arrayId);
+  if (t.confirmed && arr) {
+    const np = clamp(t.pos + d, 0, arr.slots.length);
+    if (np === t.pos) return false;
+    t.pos = np;
+    return `${SIDE[side]}の目印：${t.pos}枚目まで出た`;
+  }
+  if (d > 0) { t.entries.push({ no: null, ts: Date.now() }); return '不明なカードを1枚進めました。' + autoIdentify(m, side); }
+  if (!t.entries.length) return false;
+  const e = t.entries.pop();
+  return e.no ? `記録を1枚取り消しました(${entryKey(e)})` : '1枚戻しました';
+}
+
+/* =========================================================
+   画面
+   ========================================================= */
+function thumbHTML(set, key) {
+  const keys = Array.isArray(key) ? key : [key];
+  if (keys.length > 1) {
+    const rs = slotRarities(set, keys);
+    return `<div class="thumb multi" style="${bgStyle(rs)}"><div class="mtxt">《ランダム》<br>${keys.length <= 3 ? keys.map(k => esc(shortNo(k))).join('<br>') : esc(keys.length + '種')}</div></div>`;
+  }
+  const k = keys[0];
+  const { no, star } = splitKey(k);
+  const c = set.byNo[no];
+  const r = keyRarity(set, k);
+  const img = c && c.image ? `<img loading="lazy" alt="" src="${esc(c.image)}" onerror="this.parentNode.classList.add('noimg')">` : '';
+  return `<div class="thumb ${rcls(r)} ${img ? '' : 'noimg'}">${img}<div class="fb">${esc(no)}<br>${esc(r)}</div>${star ? '<span class="star">★</span>' : ''}</div>`;
+}
+function statusText(m, side) {
+  const set = S(m), t = m.tubes[side], arr = getArr(set, t.arrayId);
+  if (t.confirmed && arr) return `配列${t.arrayId} ${t.pos}/${arr.slots.length}`;
+  const r = identify(m, side);
+  if (!r.known) return t.fresh ? '未確定(新しい筒)' : '未確定';
+  return `未確定・候補${r.exact.length}`;
+}
+function nextInfo(set, arr, pos) {
+  const res = { remain: arr.slots.length - pos, PR: null, ER: null, star: null };
+  for (let i = pos; i < arr.slots.length; i++) {
+    const rs = slotRarities(set, arr.slots[i]); const d = i + 1 - pos;
+    if (res.PR == null && rs.includes('PR')) res.PR = { d, at: i + 1 };
+    if (res.ER == null && rs.includes('ER')) res.ER = { d, at: i + 1 };
+    if (res.star == null && rs.some(r => r.endsWith('★'))) res.star = { d, at: i + 1 };
+  }
+  return res;
+}
+function statsHTML(set, arr, pos) {
+  const n = nextInfo(set, arr, pos);
+  const cell = (lab, cls, v) => `<div class="${cls}">${lab}<b>${v ? v.d : '−'}</b></div>`;
+  return `<div class="stats"><div>残り<b>${n.remain}</b></div>${cell('PRまで', 'r-PR', n.PR)}${cell('ERまで', 'r-ER', n.ER)}${cell('★まで', 'r-PRs', n.star)}</div>`;
+}
+
+/* 上のパネル：次に出るパラレル(★)の画像・番号・名前・買取価格 */
+function nextStarHTML(set, t) {
+  const n = nextStarInfo(set, t);
+  if (!n) return '';
+  if (n.none) return '<div class="nstar none">この筒にはもう★なし</div>';
+  const yen = v => Math.round(v).toLocaleString() + '円';
+  const one = n.slot.length === 1;
+  const rs = slotRarities(set, n.slot);
+  let title, sub;
+  if (one) {
+    const c = set.byNo[splitKey(n.slot[0]).no];
+    title = `${shortNo(n.slot[0])} ${c ? c.name : ''}`;
+    sub = `${n.at}枚目・${yen(n.avg)}`;
+  } else {
+    // 例：「30/31/32/50★のどれか」。多いときは種類数だけ
+    title = n.slot.length <= 4 ? n.slot.slice().sort().map(k => shortNo(k).replace('★', '')).join('/') + '★のどれか' : `★${n.slot.length}種のどれか`;
+    sub = `${n.at}枚目・平均${yen(n.avg)}`;
+  }
+  const pic = one ? thumbHTML(set, n.slot[0]) : `<div class="thumb multi" style="${bgStyle(rs)}"><div class="mtxt" style="font-size:10px">★<br>${n.slot.length}種</div></div>`;
+  return `<div class="nstar" style="${bgStyle(rs)}" data-act="starinfo" data-side="${t === M().tubes.L ? 'L' : 'R'}">${pic}<div class="ns-t"><div class="ns-1">${esc(title)}</div><div class="ns-2">${esc(sub)}</div></div><div class="ns-d">あと<b>${n.d}</b></div></div>`;
+}
+function renderHeader() {
+  const sel = $('#machineSel');
+  sel.innerHTML = store.machines.map(x => `<option value="${esc(x.id)}" ${x.id === store.cur ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
+  $('#nextToggle').textContent = store.ui.nextOpen ? '▲' : '▼';
+}
+function renderNext() {
+  const el = $('#next');
+  el.hidden = !store.ui.nextOpen;
+  if (!store.ui.nextOpen) return;
+  const m = M(), set = S(m);
+  el.innerHTML = ['L', 'R'].map(side => {
+    const t = m.tubes[side], arr = getArr(set, t.arrayId);
+    let body;
+    if (t.confirmed && arr) {
+      if (t.pos >= arr.slots.length) {
+        body = `<div class="np-end">100枚目まで出ました<br><button class="btn sm pri" data-act="nextcyl" data-side="${side}" data-noask="1">次の筒へ</button></div>`;
+      } else {
+        const idx = [];
+        for (let i = t.pos; i < Math.min(t.pos + 3, arr.slots.length); i++) idx.push(i);
+        body = `<div class="np-cards">${idx.map((i, j) => `<div class="nc ${j === 0 ? 'first' : ''}">${thumbHTML(set, arr.slots[i])}<div class="nc-l">${j === 0 ? '次 ' : ''}${i + 1}枚目</div></div>`).join('')}</div>` + statsHTML(set, arr, t.pos) + nextStarHTML(set, t);
+      }
+    } else {
+      const r = identify(m, side);
+      if (!r.known) body = `<div class="np-un"><span class="big">カードを入力して特定</span><br>${t.fresh ? '新しい筒：1枚目からの一致を優先します' : '出たカードを入力タブで記録します'}</div>`;
+      else if (r.exact.length) body = `<div class="np-un"><span class="big">候補 ${r.exact.length}件</span><br>${r.exact.slice(0, 3).map(c => `配列${c.arrayId}の${c.end}`).join('<br>')}${r.exact.length > 3 ? '<br>…' : ''}</div>`;
+      else body = `<div class="np-un"><span class="big" style="color:var(--ng)">一致なし</span><br>入力を見直してください${r.near.length ? '(近い候補あり)' : ''}</div>`;
+    }
+    const short = t.confirmed && arr ? `配列${t.arrayId}` : (identify(m, side).known ? '未確定' : '');
+    return `<div class="np ${store.ui.side === side ? 'sel' : ''}" data-act="side" data-side="${side}"><div class="np-h"><b>${SIDE[side]}</b><span class="st">${esc(short)}</span><button class="step" data-act="step" data-side="${side}" data-d="-1" aria-label="1枚戻す">−1</button><button class="step" data-act="step" data-side="${side}" data-d="1" aria-label="1枚進める">＋1</button></div>${body}</div>`;
+  }).join('');
+}
+function renderInbar() {
+  const m = M();
+  $('#inbar').hidden = store.ui.tab !== 'input';
+  document.querySelectorAll('#inbar .seg').forEach(b => b.classList.toggle('on', b.dataset.side === store.ui.side));
+  $('#inL').textContent = statusText(m, 'L');
+  $('#inR').textContent = statusText(m, 'R');
+  $('#starBtn').classList.toggle('on', !!store.ui.starMode);
+}
+function entryChip(set, e, bad) {
+  if (!e.no) return '<span class="echip wild">？</span>';
+  const k = entryKey(e);
+  return `<span class="echip ${rcls(keyRarity(set, k))} ${bad ? 'bad' : ''}">${esc(shortNo(k))}</span>`;
+}
+function candHTML(side, c) {
+  const tags = (c.pair ? '<span class="tag">ペア</span>' : '') + (c.first ? '<span class="tag blue">1枚目から</span>' : '') + (c.mis ? `<span class="tag gray">${c.mis}枚違い</span>` : '');
+  return `<button class="cand ${c.prio === 0 || (c.pair && c.prio <= 2) ? 'prio' : ''}" data-act="pick" data-side="${side}" data-a="${c.arrayId}" data-end="${c.end}">配列<b>${c.arrayId}</b>の<b>${c.end}</b>枚目${tags}<span class="go">これにする</span></button>`;
+}
+function candList(side, list) {
+  const lim = store.ui.allCands ? 60 : 6;
+  let h = `<div class="cands">${list.slice(0, lim).map(c => candHTML(side, c)).join('')}</div>`;
+  if (list.length > lim) h += `<button class="btn sm" style="margin-top:6px" data-act="allcands">ほか ${list.length - lim}件を表示</button>`;
+  else if (store.ui.allCands && list.length > 6) h += `<button class="btn sm" style="margin-top:6px" data-act="allcands">たたむ</button>`;
+  return h;
+}
+function renderIdent() {
+  const m = M(), set = S(m), side = store.ui.side, t = m.tubes[side];
+  const r = identify(m, side);
+  const bad = mismatches(m, side);
+  const badSet = new Set(bad);
+  const last = t.entries.slice(-12);
+  let h = `<div class="ib-h">${SIDE[side]}・第${t.cyl}筒${t.fresh && !t.confirmed ? '<span class="tag blue">新しい筒</span>' : ''}<span style="margin-left:auto;font-weight:400;font-size:12px;color:var(--sub)">記録 ${t.entries.filter(e => e.no).length}枚</span></div>`;
+  h += `<div class="recent">${last.length ? (t.entries.length > 12 ? '<span class="echip wild">…</span>' : '') + last.map(e => entryChip(set, e, badSet.has(e))).join('') : '<span class="hint" style="margin:0">まだ記録がありません。下のカードをタップすると記録します</span>'}</div>`;
+  if (t.confirmed) {
+    h += `<div class="ib-st ok">配列${t.arrayId}の${t.pos}枚目まで出た <span class="tag">確定</span><button class="btn sm" data-act="unconfirm" data-side="${side}">特定し直す</button></div>`;
+    if (bad.length) {
+      h += `<div class="warn">記録と配列${t.arrayId}が合わない枠が${bad.length}件あります(${bad.slice(0, 4).map(e => e.pos + '枚目').join('、')})。見間違いなら「戻す」、配列が違うなら下の候補から選び直してください。</div>`;
+      if (r.exact.length) h += `<div class="hint">記録に一致する候補：</div>` + candList(side, r.exact);
+      else if (r.near.length) h += `<div class="hint">近い候補：</div>` + candList(side, r.near);
+    }
+  } else if (!r.known) {
+    h += `<div class="hint">出たカードを入れると、12配列から「配列○の△枚目」を探します。${r.pairOf ? `相手の筒のペア(配列${r.pairOf})を優先して表示します。` : ''}</div>`;
+  } else if (r.exact.length) {
+    h += `<div class="ib-st">候補 ${r.exact.length}件 <small style="font-weight:400;color:var(--sub)">続けて入力すると絞り込みます</small></div>` + candList(side, r.exact);
+  } else if (r.near.length) {
+    h += `<div class="warn">完全に一致する並びがありません。見間違い・入れ忘れがないか確かめてください(「戻す」で取り消し)。近い候補：</div>` + candList(side, r.near);
+  } else {
+    h += `<div class="warn">一致する並びがありません。最後の入力を「戻す」で取り消すか、記録タブで間違った記録を消してください。</div>`;
+  }
+  $('#identBox').innerHTML = h;
+}
+function renderChips() {
+  const f = store.ui.rarF;
+  $('#rarChips').innerHTML = ['PR', 'R', 'N', 'ER', '★'].map(r => `<button class="chip ${r === '★' ? 'r-PRs' : rcls(r)} ${f.includes(r) ? 'on' : ''}" data-act="rar" data-r="${r}">${r}</button>`).join('');
+}
+let lastGridKey = '';
+function renderGrid(force) {
+  const set = S(M());
+  const f = store.ui.rarF, kwRaw = $('#kw').value, kw = norm(kwRaw), star = !!store.ui.starMode;
+  const gk = [set.id, f.join(','), kw, star, JSON.stringify(dataOverride[set.id] ? 1 : 0)].join('|');
+  if (!force && gk === lastGridKey) return;
+  lastGridKey = gk;
+  /* 番号(5 / 05 / 1-5 / E1-05)を入れたときは、そのカード1枚だけを出す */
+  const pn = kwRaw.trim() ? parseCardNo(kwRaw, set.id) : null;
+  const exact = pn && set.byNo[pn.no];
+  const list = exact ? [exact] : set.cards.filter(c => {
+    if (f.length && !f.some(r => r === '★' ? set.starNos.has(c.no) : c.rarity === r)) return false;
+    if (kw && !(norm(c.name).includes(kw) || norm(c.no).includes(kw))) return false;
+    return true;
+  });
+  $('#grid').innerHTML = list.map(c => {
+    const can = c.rarity === 'PR' || c.rarity === 'ER';
+    const st = star && can;
+    const r = c.rarity + (st ? '★' : '');
+    return `<button class="tile ${star && !can ? 'dis' : ''}" data-act="rec" data-no="${esc(c.no)}">${thumbHTML(set, st ? c.no + '★' : c.no)}<span class="tl"><b>${esc(shortNo(c.no))}</b> <i class="${rcls(r)}">${esc(r)}</i></span><span class="tn">${esc(c.name)}</span></button>`;
+  }).join('') || '<p class="hint">該当するカードがありません</p>';
+}
+
+/* ---- テンキー ---- */
+let padBuf = '';
+function padCard() {
+  const set = S(M());
+  const p = padBuf ? parseCardNo(padBuf, set.id) : null;
+  return p ? set.byNo[p.no] || null : null;
+}
+function renderPad() {
+  const open = store.ui.tab === 'input' && !!store.ui.pad;
+  $('#pad').hidden = !open;
+  document.body.classList.toggle('padopen', open);
+  $('#padBtn').classList.toggle('on', !!store.ui.pad);
+  if (!open) return;
+  const set = S(M()), star = !!store.ui.starMode, side = SIDE[store.ui.side];
+  $('#padStar').classList.toggle('on', star);
+  const c = padCard();
+  const can = !!c && (!star || c.rarity === 'PR' || c.rarity === 'ER');
+  let h;
+  if (!padBuf) h = `<div class="pv-no" style="color:var(--sub)">--</div><div class="pv-nm">番号を押して「記録」<div class="pv-side">${side}に記録${star ? '・★' : ''}</div></div>`;
+  else if (!c) h = `<div class="pv-no">${esc(padBuf)}</div><div class="pv-nm" style="color:var(--ng)">該当するカードなし</div>`;
+  else {
+    const k = c.no + (star && can ? '★' : '');
+    h = `${thumbHTML(set, k)}<div class="pv-no">${esc(shortNo(k))}</div><div class="pv-nm">${esc(c.name)}<div class="pv-side">${esc(keyRarity(set, k))}・${side}に記録${star && !can ? '(★はPR/ERだけ)' : ''}</div></div>`;
+  }
+  $('#padPrev').innerHTML = h;
+  $('#padOk').disabled = !can;
+}
+
+/* ---- 配列表 ---- */
+function rowPass(set, slot) {
+  if (!slot) return false;
+  const f = store.ui.rowFilter;
+  if (f === 'all') return true;
+  const rs = slotRarities(set, slot);
+  const top = Math.max(...rs.map(r => RANK[r] ?? 0));
+  if (f === 'R') return top >= 1;
+  if (f === 'PR') return top >= 2;
+  if (f === 'ER') return rs.some(r => r === 'ER' || r.endsWith('★'));
+  return true;
+}
+function cellHTML(set, side, t, arr, i, candEnds, entryAt) {
+  const slot = arr && i >= 1 ? arr.slots[i - 1] : null;
+  if (!slot) return '<div class="row empty"></div>';
+  const rs = slotRarities(set, slot);
+  let cls = 'row';
+  if (t.confirmed) { if (i <= t.pos) cls += ' out'; else if (i === t.pos + 1) cls += ' nextc'; }
+  if (candEnds.has(i)) cls += ' cand';
+  if (!rowPass(set, slot)) cls += ' dim';
+  let main;
+  if (slot.length === 1) {
+    const { no, star } = splitKey(slot[0]);
+    const c = set.byNo[no];
+    main = `<div class="l1"><b>${esc(shortNo(no))}${star ? '★' : ''}</b> <span class="rt">${esc(rs[0])}</span></div><div class="l2">${esc(c ? c.name : '?')}</div>`;
+  } else {
+    main = `<div class="l1"><b>《ランダム》</b> <span class="rt">${esc(rs.join('/'))}</span></div><div class="l2">${slot.length <= 4 ? esc(slot.map(shortNo).join('/')) : esc(slot.length + '種のどれか')}</div>`;
+  }
+  const e = entryAt.get(i);
+  const mk = e ? (slot.includes(entryKey(e)) ? '<span class="mk ok">✓</span>' : '<span class="mk ng">✗</span>') : '';
+  return `<div class="${cls}" data-act="cell" data-side="${side}" data-i="${i}" style="${bgStyle(rs)}"><span class="p">${i}</span><div class="c">${main}</div>${mk}</div>`;
+}
+function renderTable() {
+  const m = M(), set = S(m);
+  $('#syncBtn').textContent = '連動：' + (store.ui.sync ? 'オン' : 'オフ');
+  $('#syncBtn').classList.toggle('on', !!store.ui.sync);
+  $('#rowFilter').value = store.ui.rowFilter;
+  $('#alignBtn').textContent = '揃え：' + (store.ui.align === 'marker' ? '目印' : '枚数目');
+  const arrs = { L: getArr(set, m.tubes.L.arrayId), R: getArr(set, m.tubes.R.arrayId) };
+  /* 行 r に、左は r+base.L 枚目、右は r+base.R 枚目を並べる。
+     目印で揃えるときは base = 出た枚数(次に出るカードが同じ行に来る)、枚数目で揃えるときは 0 */
+  const base = { L: 0, R: 0 }, lens = {};
+  for (const side of ['L', 'R']) {
+    const t = m.tubes[side];
+    lens[side] = arrs[side] ? arrs[side].slots.length : 0;
+    if (store.ui.align === 'marker' && t.confirmed) base[side] = t.pos;
+  }
+  const rMin = Math.min(1 - base.L, 1 - base.R), rMax = Math.max(lens.L - base.L, lens.R - base.R);
+  const slotAt = (side, i) => arrs[side] && i >= 1 ? arrs[side].slots[i - 1] : null;
+  const rows = [];
+  /* 次に出るカードの行は、絞り込み中でも必ず出す */
+  const isNext = (side, i) => m.tubes[side].confirmed && i === m.tubes[side].pos + 1;
+  for (let r = rMin; r <= rMax; r++) {
+    const iL = r + base.L, iR = r + base.R;
+    if (isNext('L', iL) || isNext('R', iR) || rowPass(set, slotAt('L', iL)) || rowPass(set, slotAt('R', iR))) rows.push(r);
+  }
+  /* 目印が進むと上に行が増えるので、見ている位置がずれないようにスクロールを補正する */
+  const above = rows.filter(r => r < 1).length;
+  const shift = tableAbove == null ? 0 : (above - tableAbove) * 42;
+  tableAbove = above;
+  for (const side of ['L', 'R']) {
+    const t = m.tubes[side], arr = arrs[side];
+    const o = m.tubes[OTHER[side]];
+    const pair = o.confirmed ? pairId(set, o.arrayId) : null;
+    $('#th' + side).innerHTML = `<div class="tr"><b>${SIDE[side]}</b><select class="arrSel" data-side="${side}" aria-label="${SIDE[side]}の配列">${set.arrays.map(a => `<option value="${a.id}" ${a.id === t.arrayId ? 'selected' : ''}>${esc(a.name)}${a.id === pair ? '(ペア)' : ''}</option>`).join('')}</select></div><div class="ts">${esc(statusText(m, side))}</div>`;
+    const candEnds = new Set();
+    if (!t.confirmed) identify(m, side).exact.filter(c => c.arrayId === t.arrayId).forEach(c => candEnds.add(c.end));
+    const entryAt = new Map();
+    if (t.confirmed) t.entries.forEach(e => { if (e.no && e.pos) entryAt.set(e.pos, e); });
+    const col = $('#col' + side);
+    const st = col.scrollTop;
+    col.innerHTML = rows.map(r => cellHTML(set, side, t, arr, r + base[side], candEnds, entryAt)).join('');
+    col.scrollTop = st + shift;
+  }
+  sizeCols();
+}
+let tableAbove = null;
+function sizeCols() {
+  const cols = document.querySelectorAll('.tcol');
+  if (!cols.length || store.ui.tab !== 'table') return;
+  const top = cols[0].getBoundingClientRect().top + window.scrollY;
+  const tab = $('#tabbar').getBoundingClientRect().height;
+  const h = Math.max(240, window.innerHeight - top - tab - 10);
+  cols.forEach(c => c.style.height = h + 'px');
+}
+function jumpToMarker(sideOnly) {
+  const m = M();
+  for (const side of ['L', 'R']) {
+    if (sideOnly && side !== sideOnly) continue;
+    const t = m.tubes[side];
+    const col = $('#col' + side);
+    const target = t.confirmed ? t.pos + 1 : 1;
+    const row = col.querySelector(`.row[data-i="${target}"]`) || col.querySelector('.row.nextc');
+    if (row) col.scrollTop = Math.max(0, row.offsetTop - col.clientHeight / 3);
+  }
+}
+let syncing = false;
+function onColScroll(e) {
+  if (!store.ui.sync || syncing) return;
+  const other = e.target.id === 'colL' ? $('#colR') : $('#colL');
+  syncing = true;
+  other.scrollTop = e.target.scrollTop;
+  requestAnimationFrame(() => { syncing = false; });
+}
+
+/* ---- 検索 ---- */
+function positionsOf(set, key) {
+  return set.arrays.map(a => {
+    const ps = [];
+    a.slots.forEach((s, i) => { if (s.includes(key)) ps.push({ i: i + 1, n: s.length }); });
+    return { a, ps };
+  });
+}
+function renderSearch() {
+  const m = M(), set = S(m), q = $('#q').value.trim(), out = $('#sres');
+  if (!q) {
+    out.innerHTML = '<p class="hint">番号(29 / 1-29 / E1-29)かカード名を入れると、12配列それぞれの何枚目にあるかを出します。★を付けるとパラレル(例：35★)。</p>';
+    return;
+  }
+  const p = parseCardNo(q, set.id);
+  let card = p && set.byNo[p.no] ? p : null;
+  if (!card) {
+    const kw = norm(q);
+    const list = set.cards.filter(c => norm(c.name).includes(kw) || norm(c.no).includes(kw));
+    if (list.length === 1) card = { no: list[0].no, star: false };
+    else {
+      out.innerHTML = list.length ? `<p class="hint">${list.length}件。カードを選んでください</p><div class="slist">${list.map(c => `<button class="tile" data-act="sq" data-no="${esc(c.no)}">${thumbHTML(set, c.no)}<span class="tl"><b>${esc(shortNo(c.no))}</b> <i class="${rcls(c.rarity)}">${esc(c.rarity)}</i></span><span class="tn">${esc(c.name)}</span></button>`).join('')}</div>` : '<p class="hint">見つかりません</p>';
+      return;
+    }
+  }
+  const c = set.byNo[card.no];
+  const keys = [card.no];
+  if (set.starNos.has(card.no)) keys.push(card.no + '★');
+  if (card.star && keys.length > 1) keys.reverse();
+  let h = '';
+  for (const key of keys) {
+    const r = keyRarity(set, key);
+    const pos = positionsOf(set, key);
+    h += `<div class="box"><div class="sc">${thumbHTML(set, key)}<div><div style="font-size:18px;font-weight:700">${esc(key)}</div><div>${esc(c.name)}</div><div style="margin-top:4px"><span class="echip ${rcls(r)}">${esc(r)}</span></div><div class="hint">${pos.filter(x => x.ps.length).length}配列に${pos.reduce((s, x) => s + x.ps.length, 0)}か所</div></div></div>`;
+    h += '<table class="ptable"><tbody>' + pos.map(({ a, ps }) => {
+      let cell = ps.length ? ps.map(x => `${x.i}枚目${x.n > 1 ? `<small>(${x.n}種のどれか)</small>` : ''}`).join('、') : '<span class="none">なし</span>';
+      for (const side of ['L', 'R']) {
+        const t = m.tubes[side];
+        if (t.confirmed && t.arrayId === a.id && ps.length) {
+          const nx = ps.find(x => x.i > t.pos);
+          cell += `<br><span class="tag">${SIDE[side]}</span> ${nx ? `あと${nx.i - t.pos}枚(${nx.i}枚目)` : 'この筒ではもう出ない'}`;
+        }
+      }
+      return `<tr><th>${esc(a.name)}</th><td>${cell}</td></tr>`;
+    }).join('') + '</tbody></table></div>';
+  }
+  out.innerHTML = h;
+}
+
+/* ---- 期待値・並ぶ位置 ----
+   左右どちらから出るかはランダム(偏りの強さ streak = 前と同じ筒から出る確率。0.5 なら半々)。
+   前の人は「上限まで」「PR以上が出るまで(上限あり)」「1枚だけ」のどれかを割合で選び、
+   実際の配列の並びでくじを何千回も引いて、自分が○人目に並んだときの★の確率と期待値を出す。 */
+const EV_DEF = { max: 20, cost: 100, mixMax: 50, mixGood: 30, mixOne: 20, streak: 0.5, mine: 'stop', people: 12 };
+function evConf(m) { m.ev = Object.assign({}, EV_DEF, m.ev || {}); return m.ev; }
+function prices() { return store.prices || (store.prices = {}); }
+function starKeys(set) { return [...set.starNos].sort().map(no => no + '★'); }
+function refPrice(set, key) { const r = set.ref && set.ref.prices; return r && r[key] != null ? +r[key] : null; }
+/* 自分で入れた価格 → 参考価格(買取表) → 0円 の順 */
+function priceOf(set, key) {
+  const u = prices()[key];
+  if (u != null && u !== '') return +u || 0;
+  const r = refPrice(set, key);
+  return r != null ? r : 0;
+}
+/* 筒ごとに「残りの枠」を、引いたときの情報(★か・値段・PR以上か)の候補リストにしておく */
+function tubePlan(set, t) {
+  const arr = t.confirmed ? getArr(set, t.arrayId) : null;
+  if (!arr) return { slots: [], pos: 0 };
+  return {
+    pos: t.pos,
+    slots: arr.slots.map(slot => slot.map(k => ({ star: k.endsWith('★'), val: priceOf(set, k), good: (RANK[keyRarity(set, k)] || 0) >= 2 })))
+  };
+}
+const UNKNOWN_GOOD = 0.14;   // 未確定の筒・次の筒から出るカードが PR 以上になる割合(100枚中およそ14枚)
+function simulateEV(m, runs) {
+  const set = S(m), c = evConf(m);
+  const plans = [tubePlan(set, m.tubes.L), tubePlan(set, m.tubes.R)];
+  const tot = (+c.mixMax || 0) + (+c.mixGood || 0) + (+c.mixOne || 0) || 1;
+  const pMax = (+c.mixMax || 0) / tot, pGood = (+c.mixGood || 0) / tot;
+  const max = Math.max(1, Math.floor(+c.max || 1)), streak = clamp(+c.streak || 0.5, 0, 1);
+  const Q = clamp(Math.floor(+c.people || 12), 1, 40);
+  const res = [];
+  for (let k = 0; k < Q; k++) {
+    let hit = 0, val = 0, plays = 0, before = 0;
+    for (let r = 0; r < runs; r++) {
+      const pos = [plans[0].pos, plans[1].pos];
+      let last = Math.random() < 0.5 ? 0 : 1;
+      const draw = () => {
+        const ti = Math.random() < streak ? last : 1 - last;
+        last = ti;
+        const p = pos[ti]++;
+        const sl = plans[ti].slots[p];
+        if (!sl) return { star: false, val: 0, good: Math.random() < UNKNOWN_GOOD };
+        return sl.length === 1 ? sl[0] : sl[Math.floor(Math.random() * sl.length)];
+      };
+      for (let q = 0; q < k; q++) {
+        const u = Math.random();
+        const type = u < pMax ? 0 : u < pMax + pGood ? 1 : 2;
+        const n = type === 2 ? 1 : max;
+        for (let i = 0; i < n; i++) { const d = draw(); before++; if (type === 1 && d.good) break; }
+      }
+      let got = false;
+      for (let i = 0; i < max; i++) {
+        const d = draw(); plays++; val += d.val;      // 自分が引いたカードの買取価格を全部足す
+        if (d.star) { got = true; if (c.mine === 'stop') break; }
+      }
+      if (got) hit++;
+    }
+    res.push({ k, p: hit / runs, val: val / runs, cost: plays / runs * (+c.cost || 0), plays: plays / runs, before: before / runs });
+  }
+  return res;
+}
+function nextStarInfo(set, t) {
+  const arr = t.confirmed ? getArr(set, t.arrayId) : null;
+  if (!arr) return null;
+  for (let i = t.pos; i < arr.slots.length; i++) {
+    const sl = arr.slots[i];
+    if (sl.some(k => k.endsWith('★'))) {
+      const avg = sl.reduce((s, k) => s + priceOf(set, k), 0) / sl.length;
+      return { d: i + 1 - t.pos, at: i + 1, slot: sl, avg };
+    }
+  }
+  return { none: true };
+}
+function renderEvForm() {
+  const m = M(), set = S(m), c = evConf(m), pr = prices();
+  const num = (id, v, u, step) => `<input type="number" inputmode="numeric" data-ev="${id}" value="${esc(v)}" min="0" step="${step || 1}"><span class="u">${u}</span>`;
+  $('#evForm').innerHTML = `
+  <div class="box"><h3>この店・筐体の条件 <small style="font-weight:400;color:var(--sub)">${esc(m.name)}</small></h3>
+    <div class="evf">
+      <span>1人が買える上限</span><span>${num('max', c.max, '枚')}</span>
+      <span>1プレイの値段</span><span>${num('cost', c.cost, '円', 10)}</span>
+      <span>前の人：上限まで買う</span><span>${num('mixMax', c.mixMax, '%')}</span>
+      <span>前の人：PR・ERが出るまで</span><span>${num('mixGood', c.mixGood, '%')}</span>
+      <span>前の人：1枚だけ</span><span>${num('mixOne', c.mixOne, '%')}</span>
+      <span>左右の偏り</span><span><select data-ev="streak">${[[0.5, 'なし(半々)'], [0.65, '少し偏る'], [0.8, '強く偏る']].map(([v, l]) => `<option value="${v}" ${+c.streak === v ? 'selected' : ''}>${l}</option>`).join('')}</select></span>
+      <span>自分の買い方</span><span><select data-ev="mine"><option value="stop" ${c.mine === 'stop' ? 'selected' : ''}>★が出たらやめる</option><option value="max" ${c.mine === 'max' ? 'selected' : ''}>上限まで買う</option></select></span>
+      <span>何人目まで計算</span><span>${num('people', c.people, '人')}</span>
+    </div>
+    <p class="hint">割合は合計が100でなくても、比で計算します。「偏り」は、同じ筒から続けて出やすいかどうかです(少し＝65%、強く＝80%で前と同じ筒)。</p></div>
+  <div class="box"><h3>買取価格</h3>
+    <p class="hint" style="margin-top:0">${set.ref ? `空欄のカードは、参考価格(<a href="${esc(set.ref.url)}" target="_blank" rel="noopener">${esc(set.ref.source)}</a>、${esc(set.ref.checked)} 確認)で計算します。入力した価格はそちらより優先します。` : '空欄は0円として計算します。'}全店共通です。</p>
+    ${Object.keys(pr).length ? '<div class="btnrow"><button class="btn sm" data-act="clearprices">入力した価格を消して参考価格に戻す</button></div>' : ''}
+    <b style="font-size:14px">★(パラレル)</b>
+    ${priceRows(set, starKeys(set))}
+    <details style="margin-top:8px"><summary style="font-weight:600;font-size:14px">PR・ER(★以外)</summary>
+    ${priceRows(set, set.cards.filter(c2 => c2.rarity === 'PR' || c2.rarity === 'ER').map(c2 => c2.no))}
+    <p class="hint">N・Rは参考価格(1円)のままで計算します。</p></details>
+  </div>`;
+}
+function priceRows(set, keys) {
+  const pr = prices();
+  return keys.map(k => {
+    const c2 = set.byNo[splitKey(k).no], ref = refPrice(set, k);
+    return `<div class="prow">${thumbHTML(set, k)}<div class="nm"><b>${esc(shortNo(k))}</b> ${esc(keyRarity(set, k))}<br>${esc(c2 ? c2.name : '')}</div><input type="number" inputmode="numeric" min="0" step="100" data-price="${esc(k)}" value="${pr[k] != null && pr[k] !== '' ? esc(pr[k]) : ''}" placeholder="${ref != null ? ref : 0}"><span class="u">円</span></div>`;
+  }).join('');
+}
+function renderEvResult() {
+  const m = M(), set = S(m), c = evConf(m);
+  const out = $('#evRes');
+  const tL = m.tubes.L, tR = m.tubes.R;
+  if (!tL.confirmed && !tR.confirmed) { out.innerHTML = '<div class="box"><p class="hint" style="margin:0">左右どちらかの筒の配列が決まると計算できます。入力タブでカードを記録してください。</p></div>'; return; }
+  const ns = side => {
+    const t = m.tubes[side], n = nextStarInfo(set, t);
+    if (!n) return `<div><b>${SIDE[side]}</b><br><span class="hint">未確定</span></div>`;
+    if (n.none) return `<div><b>${SIDE[side]}</b> 配列${t.arrayId}<br>この筒にはもう★なし</div>`;
+    const names = n.slot.length === 1 ? n.slot[0] : `《ランダム》${n.slot.length}種`;
+    return `<div><b>${SIDE[side]}</b> 配列${t.arrayId}<br>★まで あと<b style="font-size:17px">${n.d}</b>枚(${n.at}枚目)<br><small>${esc(names)}・${n.avg ? Math.round(n.avg).toLocaleString() + '円' : '<span style="color:var(--ng)">価格未入力</span>'}</small></div>`;
+  };
+  const runs = 3000;
+  const t0 = performance.now();
+  const rs = simulateEV(m, runs);
+  const ms = Math.round(performance.now() - t0);
+  const anyPrice = starKeys(set).some(k => priceOf(set, k) > 0);
+  const best = anyPrice ? rs.reduce((b, r) => (r.val - r.cost > b.val - b.cost ? r : b), rs[0]) : rs.reduce((b, r) => (r.p > b.p ? r : b), rs[0]);
+  const maxP = Math.max(...rs.map(r => r.p), 0.001);
+  const yen = v => (v < 0 ? '−' : '') + Math.abs(Math.round(v)).toLocaleString() + '円';
+  out.innerHTML = `<div class="box"><h3>並ぶ位置と★の確率</h3>
+    <div class="nst">${ns('L')}${ns('R')}</div>
+    <table class="evt"><thead><tr><th>並ぶ位置</th><th>★が出る確率</th><th>期待値</th><th>前の人の合計</th></tr></thead><tbody>
+    ${rs.map(r => `<tr class="${r === best ? 'best' : ''}"><td>${r.k === 0 ? '今すぐ' : `前に${r.k}人`}</td><td><span class="bar" style="width:${Math.round(r.p / maxP * 40)}px"></span>${Math.round(r.p * 100)}%</td><td class="${anyPrice ? (r.val - r.cost >= 0 ? 'pos' : 'neg') : ''}">${anyPrice ? yen(r.val - r.cost) : '−'}</td><td>約${Math.round(r.before)}枚</td></tr>`).join('')}
+    </tbody></table>
+    <p class="hint">期待値＝自分が引くカード(★以外も含む)の買取価格の合計 − 自分が払う額(平均${rs.length ? rs[0].plays.toFixed(1) : '-'}枚〜${Math.max(...rs.map(r => r.plays)).toFixed(1)}枚×${(+c.cost || 0).toLocaleString()}円)。${set.ref ? `価格は${esc(set.ref.source)}(${esc(set.ref.checked)})と、下で入力した値です。` : ''}${anyPrice ? '' : '<b>★の買取価格を下で入れると期待値が出ます。</b>'}<br>くじを${runs.toLocaleString()}回ずつ試した結果なので、数%はぶれます(${ms}ms)。偏りが強いときは、表よりずれやすくなります。</p></div>`;
+}
+function renderEv() { renderEvForm(); renderEvResult(); }
+
+/* ---- 記録 ---- */
+function entriesList(set, t, side, editable) {
+  if (!t.entries.length) return '<p class="hint">記録なし</p>';
+  const arr = getArr(set, t.arrayId);
+  return '<ol class="elist">' + t.entries.map((e, idx) => ({ e, idx })).reverse().map(({ e, idx }) => {
+    let mk = '';
+    if (t.confirmed && arr && e.no && e.pos) mk = arr.slots[e.pos - 1] && arr.slots[e.pos - 1].includes(entryKey(e)) ? '<span style="color:var(--ok)">✓</span>' : '<span style="color:var(--ng)">✗</span>';
+    const c = e.no ? set.byNo[e.no] : null;
+    return `<li><span class="ep">${e.pos ? e.pos + '枚目' : '−'}</span>${entryChip(set, e)}<span class="nm">${e.no ? esc(c ? c.name : '') : '不明(進めただけ)'}</span>${mk}${editable ? `<button class="x" data-act="delentry" data-side="${side}" data-idx="${idx}" aria-label="この記録を消す">×</button>` : ''}</li>`;
+  }).join('') + '</ol>';
+}
+function renderLog() {
+  const m = M(), set = S(m);
+  $('#logBox').innerHTML = ['L', 'R'].map(side => {
+    const t = m.tubes[side];
+    const cur = `<div class="box"><h3>${SIDE[side]}・第${t.cyl}筒 <small style="font-weight:400;color:var(--sub)">${esc(statusText(m, side))}</small></h3><div class="btnrow"><button class="btn" data-act="nextcyl" data-side="${side}">次の筒へ切り替え</button></div>${entriesList(set, t, side, true)}</div>`;
+    const past = t.history.slice().reverse().map(hh => `<details class="box"><summary>${SIDE[side]}・第${hh.cyl}筒：${hh.confirmed ? `配列${hh.arrayId}・${hh.pos}枚目まで` : '未確定'}・記録${hh.entries.filter(e => e.no).length}枚・${fmtTime(hh.ended)}に交換</summary>${entriesList(set, hh, side, false)}</details>`).join('');
+    return cur + past;
+  }).join('');
+}
+
+/* ---- 設定 ---- */
+function renderSettings() {
+  const m = M(), set = S(m), ids = Object.keys(SETS);
+  const th = store.ui.theme || 'auto';
+  $('#setBox').innerHTML = `
+  <div class="box"><h3>表示</h3>
+    <div class="btnrow">${[['auto', '自動'], ['light', 'ライト'], ['dark', 'ダーク']].map(([v, l]) => `<button class="btn ${th === v ? 'on' : ''}" data-act="theme" data-v="${v}">${l}</button>`).join('')}</div>
+    <p class="hint">「自動」は iPhone の設定(ライト/ダーク)に合わせます。</p>
+    ${typeof ENC !== 'undefined' && ENC && ENC.ct && lsGet(LS_ENCKEY) ? '<div class="btnrow"><button class="btn sm" data-act="forgetkey">この端末のパスワードの記憶を消す</button></div>' : ''}</div>
+  <div class="box"><h3>店舗・筐体</h3>
+    <p style="margin:4px 0">今の筐体：<b>${esc(m.name)}</b>(${esc(set.title)})</p>
+    <div class="btnrow"><button class="btn" data-act="madd">追加</button><button class="btn" data-act="mren">名前を変える</button><button class="btn" data-act="mreset">記録をリセット</button><button class="btn danger" data-act="mdel">削除</button></div>
+    ${ids.length > 1 ? `<div class="form"><label>弾 <select id="setSel">${ids.map(id => `<option value="${esc(id)}" ${id === set.id ? 'selected' : ''}>${esc(id)}：${esc(SETS[id].title)}</option>`).join('')}</select></label></div>` : ''}
+    <p class="hint">店舗・筐体ごとに、左右の筒の状態と記録を別々に保存します。切り替えは画面上の欄から。</p></div>
+  <div class="box"><h3>バックアップ</h3>
+    <div class="btnrow"><button class="btn" data-act="export">全部を書き出す</button><button class="btn" data-act="import">読み込む</button><button class="btn" data-act="exportdata">配列データだけ書き出す</button></div>
+    <p class="hint">読み込めるのは、このアプリで書き出したバックアップ(JSON)と、配列データ(aikatsu_encore_e1_arrays.json と同じ形)です。配列データを読み込むと、その弾のデータが差し替わります(新しい弾なら追加)。</p></div>
+  <div class="box"><h3>配列データの修正</h3>
+    ${dataOverride[set.id] ? '<div class="warn">この弾は、アプリ内で修正したデータを使っています。<button class="btn sm" data-act="dreset">内蔵データに戻す</button></div>' : '<p class="hint">今は内蔵のデータ(元の配列表と照合済み)を使っています。</p>'}
+    <div class="form"><b>枠を直す</b>
+      <label>配列 <select id="deArr">${set.arrays.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select></label>
+      <label>枚数目 <input id="deIdx" type="number" min="1" max="100" value="1" inputmode="numeric"></label>
+      <div id="deCur" class="hint"></div>
+      <label>新しい中身 <input id="deVal" placeholder="例：29 / 1,2 / 35★" autocomplete="off"></label>
+      <p class="hint" style="margin:0">複数候補の枠は「,」で区切って入れます。</p>
+      <button class="btn pri" data-act="desave">この枠を保存</button></div>
+    <div class="form"><b>カードを直す</b>
+      <label>カード <select id="dcNo">${set.cards.map(c => `<option value="${esc(c.no)}">${esc(c.no)} ${esc(c.name)}</option>`).join('')}</select></label>
+      <label>名前 <input id="dcName" autocomplete="off"></label>
+      <label>レアリティ <select id="dcR">${['N', 'R', 'PR', 'ER'].map(r => `<option>${r}</option>`).join('')}</select></label>
+      <button class="btn pri" data-act="dcsave">カードを保存</button></div>
+  </div>
+  <details class="box"><summary>使い方</summary><ul>
+    <li>入力タブで「左筒/右筒」を選び、出たカードの画像をタップすると記録します。パラレルは「★」を押してからタップ(1枚ごとに戻ります)。</li>
+    <li>記録した並びに一致する「配列○の△枚目」を探し、1つに決まると自動で確定します。候補をタップして自分で選ぶこともできます。</li>
+    <li>確定後は、記録するたびに目印が進みます。上の「−1/＋1」で目印だけ動かせます。配列表のカードをタップして目印を付けることもできます。</li>
+    <li>「あと○枚」は、あと何枚引けばそのカードが出るか(あと1＝次に出る)。複数候補の枠は《ランダム》で、その中に含まれれば数えます。</li>
+    <li>100枚目まで出たら「次の筒へ」。配列が未確定に戻り、1枚目から特定し直します。前の筒の記録は記録タブに残ります。</li>
+    <li>間違えたら上の「↶戻す」で1操作ずつ取り消せます。</li>
+  </ul></details>`;
+  updateDeCur(); updateDc();
+}
+function updateDeCur() {
+  const set = S(M()), a = getArr(set, +($('#deArr') || {}).value), i = +($('#deIdx') || {}).value;
+  const el = $('#deCur'); if (!el) return;
+  const slot = a && a.slots[i - 1];
+  el.textContent = slot ? '今の中身：' + slot.map(k => k + ' ' + (set.byNo[splitKey(k).no] || {}).name).join(' / ') : '範囲外の枚数目です';
+}
+function updateDc() {
+  const set = S(M()), sel = $('#dcNo'); if (!sel) return;
+  const c = set.byNo[sel.value]; if (!c) return;
+  $('#dcName').value = c.name; $('#dcR').value = c.rarity;
+}
+function saveOverride(set) {
+  dataOverride[set.id] = setToRaw(set);
+  lsSet(LS_DATA, JSON.stringify(dataOverride));
+  buildSets(); lastGridKey = '';
+}
+
+/* ---- シート(配列表のカードをタップ) ---- */
+function openCellSheet(side, i) {
+  const m = M(), set = S(m), t = m.tubes[side], arr = getArr(set, t.arrayId);
+  if (!arr || !arr.slots[i - 1]) return;
+  const slot = arr.slots[i - 1];
+  const info = slot.map(k => { const c = set.byNo[splitKey(k).no]; return `<div style="margin:2px 0"><span class="echip ${rcls(keyRarity(set, k))}">${esc(k)}</span> ${esc(c ? c.name : '?')}</div>`; }).join('');
+  const label = t.confirmed ? `ここまで出た(目印を${i}枚目に)` : `${arr.name}の${i}枚目まで出たとして確定`;
+  $('#sheetP').innerHTML = `<div style="display:flex;gap:12px;align-items:flex-start"><div style="flex:0 0 90px">${thumbHTML(set, slot.length > 1 ? slot : slot[0])}</div><div style="min-width:0"><div style="font-weight:700">${SIDE[side]}・${esc(arr.name)}の${i}枚目${slot.length > 1 ? '《ランダム》' : ''}</div><div style="max-height:150px;overflow:auto;font-size:13px">${info}</div></div></div>
+    <button class="btn pri" data-act="mark" data-side="${side}" data-i="${i}">${esc(label)}</button>
+    ${t.confirmed && i > 1 ? `<button class="btn" data-act="mark" data-side="${side}" data-i="${i - 1}">このカードが次に出る(目印を${i - 1}枚目に)</button>` : ''}
+    <button class="btn" data-act="closesheet">閉じる</button>`;
+  $('#sheet').hidden = false;
+}
+function closeSheet() { $('#sheet').hidden = true; }
+
+/* ---- 全体 ---- */
+function render(forceGrid) {
+  renderHeader(); renderInbar(); renderNext(); renderPad();
+  document.querySelectorAll('.tab').forEach(s => s.hidden = s.id !== 'tab-' + store.ui.tab);
+  document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === store.ui.tab));
+  switch (store.ui.tab) {
+    case 'input': renderIdent(); renderChips(); renderGrid(forceGrid); break;
+    case 'table': renderTable(); break;
+    case 'search': renderSearch(); break;
+    case 'ev': if (!document.querySelector('#evForm [data-ev]') || evFormFor !== M().id) { renderEvForm(); evFormFor = M().id; } renderEvResult(); break;
+    case 'log': renderLog(); break;
+    case 'settings': renderSettings(); break;
+  }
+}
+let evFormFor = null;
+let toastTimer = null;
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), msg.startsWith('⚠') ? 4500 : 2600);
+}
+function saveUI() { save(); }
+function download(name, text) {
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+}
+function ymd() { const d = new Date(); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`; }
+function validRaw(o) {
+  return o && Array.isArray(o.cards) && Array.isArray(o.arrays) && o.cards.every(c => c && typeof c.no === 'string') &&
+    o.arrays.every(a => a && Array.isArray(a.slots) && a.slots.every(s => Array.isArray(s) && s.length && s.every(k => typeof k === 'string')));
+}
+function importText(text) {
+  const o = parseJSON(text);
+  if (!o) { toast('JSONとして読めませんでした'); return; }
+  if (o.app === 'aikatsu-hairetsu' && o.store && Array.isArray(o.store.machines)) {
+    if (!confirm(`バックアップ(${fmtTime(o.exported)} 書き出し、筐体${o.store.machines.length}台)を読み込みます。今の状態は置き換わります。よろしいですか？`)) return;
+    const wasEmpty = !Object.keys(SETS).length;
+    dataOverride = Object.assign({}, dataOverride, o.dataOverride || {});   // 先に読み込んだ配列データは消さない
+    lsSet(LS_DATA, JSON.stringify(dataOverride)); buildSets();
+    if (!Object.keys(SETS).length) { lsSet(LS_KEY, JSON.stringify(o.store)); toast('記録を読み込みました。続けて配列データを読み込んでください'); return; }
+    store = o.store; store.machines.forEach(fixMachine);
+    store.ui = Object.assign({ tab: 'settings', side: 'L', sync: true, rowFilter: 'all', rarF: [], starMode: false, nextOpen: true }, store.ui || {});
+    if (!store.machines.some(x => x.id === store.cur)) store.cur = store.machines[0].id;
+    undoMap = {}; evFormFor = null;
+    save();
+    if (wasEmpty) { location.reload(); return; }
+    render(true); toast('バックアップを読み込みました');
+    return;
+  }
+  if (validRaw(o)) {
+    const mm = (o.cards[0].no || '').match(/^(E\d+)-/);
+    const id = mm ? mm[1] : 'E1';
+    const exists = !!SETS[id];
+    if (!confirm(`配列データ(${id}：カード${o.cards.length}枚、配列${o.arrays.length}個${o.refPrices ? '、買取価格つき' : ''})を${exists ? '差し替え' : '追加し'}ます。よろしいですか？`)) return;
+    const wasEmpty = !Object.keys(SETS).length;
+    dataOverride[id] = { title: o.title || id, notes: o.notes || [], cards: o.cards, arrays: o.arrays, refPrices: o.refPrices || (exists && SETS[id].ref) || undefined };
+    if (!lsSet(LS_DATA, JSON.stringify(dataOverride))) { toast('この端末に保存できませんでした'); return; }
+    if (wasEmpty) { location.reload(); return; }      // データなしの画面から始めたときは開き直す
+    buildSets(); lastGridKey = ''; evFormFor = null;
+    store.machines.forEach(fixMachine); save();
+    render(true); toast(`配列データ(${id})を読み込みました`);
+    return;
+  }
+  toast('このアプリのバックアップでも配列データでもありません');
+}
+
+/* =========================================================
+   操作
+   ========================================================= */
+const ACT = {
+  tab(d) { store.ui.tab = d.tab; store.ui.allCands = false; saveUI(); window.scrollTo(0, 0); render(); if (d.tab === 'table') requestAnimationFrame(() => { sizeCols(); jumpToMarker(); }); },
+  side(d) {
+    if (store.ui.side === d.side) return;
+    store.ui.side = d.side; store.ui.allCands = false; saveUI(); render();
+    if (navigator.vibrate) navigator.vibrate(10);
+  },
+  star() { store.ui.starMode = !store.ui.starMode; saveUI(); render(); },
+  togglenext() { store.ui.nextOpen = !store.ui.nextOpen; saveUI(); render(); sizeCols(); },
+  allcands() { store.ui.allCands = !store.ui.allCands; render(); },
+  undo() { undo(); },
+  rec(d) {
+    const set = S(M()), c = set.byNo[d.no]; if (!c) return;
+    let star = !!store.ui.starMode;
+    if (star && !(c.rarity === 'PR' || c.rarity === 'ER')) { toast('★(パラレル)はPRとERだけです'); return; }
+    const side = store.ui.side;
+    if (star) store.ui.starMode = false;     // ★は1枚ごとに戻す
+    mutate('記録 ' + d.no + (star ? '★' : ''), m => coreRecord(m, side, d.no, star));
+    /* 絞り込み欄に入れていたら空にして、次の番号をすぐ打てるようにする */
+    const kw = $('#kw');
+    if (kw.value) { kw.value = ''; renderGrid(); if (!store.ui.pad) kw.focus(); }
+  },
+  starinfo(d) {
+    const m = M(), set = S(m), t = m.tubes[d.side], n = nextStarInfo(set, t);
+    if (!n || n.none) return;
+    const yen = v => Math.round(v).toLocaleString() + '円';
+    const rows = n.slot.slice().sort().map(k => { const c = set.byNo[splitKey(k).no]; return `<div class="prow">${thumbHTML(set, k)}<div class="nm"><b>${esc(k)}</b> ${esc(keyRarity(set, k))}<br>${esc(c ? c.name : '')}</div><b>${yen(priceOf(set, k))}</b></div>`; }).join('');
+    $('#sheetP').innerHTML = `<div style="font-weight:700">${SIDE[d.side]}・配列${t.arrayId}の${n.at}枚目(あと${n.d}枚)</div>
+      <div class="hint" style="margin-top:2px">${n.slot.length > 1 ? `この枠は《ランダム》。${n.slot.length}種のどれか1枚が出ます(平均${yen(n.avg)})。` : '次に出るパラレルです。'}価格は買取の参考価格(または入力した値)。</div>
+      <div style="max-height:50vh;overflow:auto">${rows}</div>
+      <button class="btn" data-act="closesheet">閉じる</button>`;
+    $('#sheet').hidden = false;
+  },
+  clearprices() {
+    if (!confirm('入力した買取価格をすべて消して、参考価格(買取表)に戻します。よろしいですか？')) return;
+    store.prices = {}; save(); renderEv();
+  },
+  theme(d) { store.ui.theme = d.v; saveUI(); applyTheme(); render(); },
+  pad() {
+    store.ui.pad = !store.ui.pad; padBuf = ''; saveUI();
+    if (store.ui.pad && document.activeElement && document.activeElement.blur) document.activeElement.blur();   // iPhone のキーボードを閉じる
+    render();
+  },
+  pk(d) {
+    const set = S(M()), k = d.k;
+    if (k === 'bs') padBuf = padBuf.slice(0, -1);
+    else if (k === 'c') padBuf = '';
+    else if (k === 'ok') {
+      const c = padCard(); if (!c) return;
+      padBuf = '';
+      ACT.rec({ no: c.no });
+      renderPad();
+      return;
+    } else {
+      const next = padBuf + k;
+      const p = parseCardNo(next, set.id);
+      // 2桁入れたあとに続けて押したら、新しい番号の打ち始めとみなす
+      padBuf = padBuf.length >= 2 && !(p && set.byNo[p.no]) ? k : next.slice(0, 3);
+    }
+    renderPad();
+  },
+  pick(d) { mutate('候補を選ぶ', m => { coreConfirm(m, d.side, +d.a, +d.end); return `${SIDE[d.side]}：配列${d.a}の${d.end}枚目に設定しました`; }); },
+  unconfirm(d) { mutate('特定し直す', m => { const t = m.tubes[d.side]; t.confirmed = false; return `${SIDE[d.side]}を未確定に戻しました。記録から候補を出し直します`; }); },
+  step(d) { mutate(+d.d > 0 ? '1枚進める' : '1枚戻す', m => coreStep(m, d.side, +d.d)); },
+  nextcyl(d) {
+    const m = M(), t = m.tubes[d.side], arr = getArr(S(m), t.arrayId);
+    if (!d.noask && !(t.confirmed && arr && t.pos >= arr.slots.length) && !confirm(`${SIDE[d.side]}を次の筒に切り替えます。今の筒(第${t.cyl}筒)の記録は履歴に残ります。よろしいですか？`)) return;
+    mutate('次の筒', m2 => coreNextCyl(m2, d.side));
+  },
+  rar(d) { const f = store.ui.rarF, i = f.indexOf(d.r); if (i >= 0) f.splice(i, 1); else f.push(d.r); saveUI(); render(); },
+  sync() { store.ui.sync = !store.ui.sync; saveUI(); if (store.ui.sync) $('#colR').scrollTop = $('#colL').scrollTop; render(); },
+  align() {
+    store.ui.align = store.ui.align === 'marker' ? 'index' : 'marker'; saveUI(); render();
+    requestAnimationFrame(() => ACT.jump());
+    toast(store.ui.align === 'marker' ? '左右を目印(次に出るカード)で揃えました' : '左右を同じ枚数目で揃えました');
+  },
+  jump() { jumpToMarker(store.ui.sync ? store.ui.side : null); if (store.ui.sync) { const o = store.ui.side === 'L' ? 'R' : 'L'; $('#col' + o).scrollTop = $('#col' + store.ui.side).scrollTop; } },
+  cell(d) { openCellSheet(d.side, +d.i); },
+  closesheet() { closeSheet(); },
+  mark(d) {
+    closeSheet();
+    mutate('目印', m => {
+      const t = m.tubes[d.side], i = +d.i;
+      if (t.confirmed) { t.pos = i; return `${SIDE[d.side]}の目印：${i}枚目まで出た`; }
+      coreConfirm(m, d.side, t.arrayId, i);
+      return `${SIDE[d.side]}：配列${t.arrayId}の${i}枚目に設定しました`;
+    });
+  },
+  delentry(d) {
+    mutate('記録を消す', m => {
+      const t = m.tubes[d.side], e = t.entries[+d.idx]; if (!e) return false;
+      t.entries.splice(+d.idx, 1);
+      if (t.confirmed && e.pos === t.pos && t.pos > 0) t.pos -= 1;
+      return `記録を消しました(${e.no ? entryKey(e) : '不明な1枚'})`;
+    });
+  },
+  sq(d) { $('#q').value = d.no; renderSearch(); },
+  madd() {
+    const name = prompt('店舗・筐体の名前', '店舗' + (store.machines.length + 1));
+    if (!name) return;
+    const m = newMachine(name.trim() || '店舗', M().setId);
+    store.machines.push(m); store.cur = m.id; save(); render(true); toast('「' + m.name + '」を追加しました');
+  },
+  mren() { const m = M(); const name = prompt('新しい名前', m.name); if (!name) return; m.name = name.trim() || m.name; save(); render(); },
+  mreset() {
+    const m = M();
+    if (!confirm(`「${m.name}」の左右の筒の状態と記録をすべて消します(「戻す」で取り消せます)。よろしいですか？`)) return;
+    mutate('記録をリセット', mm => { mm.tubes = { L: newTube(1), R: newTube(2) }; return 'リセットしました'; });
+  },
+  mdel() {
+    if (store.machines.length <= 1) { toast('最後の1台は削除できません(「記録をリセット」を使ってください)'); return; }
+    const m = M();
+    if (!confirm(`「${m.name}」を削除します。記録も消え、元に戻せません。よろしいですか？`)) return;
+    store.machines = store.machines.filter(x => x.id !== m.id); delete undoMap[m.id];
+    store.cur = store.machines[0].id; save(); render(true); toast('削除しました');
+  },
+  export() {
+    const o = { app: 'aikatsu-hairetsu', version: 1, exported: Date.now(), store, dataOverride };
+    download(`aikatsu-hairetsu-backup-${ymd()}.json`, JSON.stringify(o, null, 1));
+  },
+  exportdata() {
+    const set = S(M());
+    download(`aikatsu_encore_${set.id.toLowerCase()}_arrays.json`, JSON.stringify(setToRaw(set), null, 1));
+  },
+  import() { $('#fileIn').value = ''; $('#fileIn').click(); },
+  dreset() {
+    const set = S(M());
+    if (!confirm(`${set.id} のデータを内蔵データに戻します。アプリ内での修正は消えます。よろしいですか？`)) return;
+    delete dataOverride[set.id]; lsSet(LS_DATA, JSON.stringify(dataOverride)); buildSets(); lastGridKey = '';
+    store.machines.forEach(fixMachine); save(); render(true); toast('内蔵データに戻しました');
+  },
+  desave() {
+    const set = S(M()), a = getArr(set, +$('#deArr').value), i = +$('#deIdx').value;
+    if (!a || !a.slots[i - 1]) { toast('枚数目が範囲外です'); return; }
+    const parts = $('#deVal').value.split(/[,、，\s\/]+/).filter(Boolean);
+    if (!parts.length) { toast('新しい中身を入れてください'); return; }
+    const keys = [];
+    for (const p of parts) {
+      const c = parseCardNo(p, set.id);
+      if (!c || !set.byNo[c.no]) { toast('カードが見つかりません：' + p); return; }
+      keys.push(c.no + (c.star ? '★' : ''));
+    }
+    if (!confirm(`${a.name}の${i}枚目を「${keys.join(', ')}」にします。よろしいですか？`)) return;
+    a.slots[i - 1] = [...new Set(keys)];
+    saveOverride(set); $('#deVal').value = ''; render(); toast(`${a.name}の${i}枚目を保存しました`);
+  },
+  dcsave() {
+    const set = S(M()), c = set.byNo[$('#dcNo').value]; if (!c) return;
+    const name = $('#dcName').value.trim(); if (!name) { toast('名前を入れてください'); return; }
+    c.name = name; c.rarity = $('#dcR').value;
+    saveOverride(set); render(); toast(c.no + ' を保存しました');
+  },
+};
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const f = ACT[b.dataset.act];
+  if (f) f(b.dataset, b, e);
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'machineSel') { store.cur = t.value; store.ui.allCands = false; save(); render(true); toast('「' + M().name + '」に切り替えました'); }
+  else if (t.classList.contains('arrSel')) {
+    const side = t.dataset.side, v = +t.value;
+    mutate('配列を変える', m => { m.tubes[side].arrayId = v; return `${SIDE[side]}に配列${v}を表示${m.tubes[side].confirmed ? `(目印${m.tubes[side].pos}枚目のまま)` : ''}`; });
+  }
+  else if (t.id === 'rowFilter') { store.ui.rowFilter = t.value; saveUI(); render(); }
+  else if (t.id === 'setSel') {
+    if (!confirm('この筐体の弾を切り替えます。今の記録はリセットされます(「戻す」で取り消せます)。よろしいですか？')) { t.value = M().setId; return; }
+    mutate('弾を切り替え', m => { m.setId = t.value; m.tubes = { L: newTube(1), R: newTube(2) }; return '弾を切り替えました'; });
+    lastGridKey = '';
+  }
+  else if (t.dataset.ev) {
+    const c = evConf(M()), k = t.dataset.ev;
+    c[k] = k === 'mine' ? t.value : (k === 'streak' ? +t.value : Math.max(0, +t.value || 0));
+    if (k === 'max' || k === 'people') c[k] = Math.max(1, Math.floor(c[k]));
+    save(); renderEvResult();
+  }
+  else if (t.dataset.price) {
+    const v = t.value.trim();
+    if (v === '') delete prices()[t.dataset.price]; else prices()[t.dataset.price] = Math.max(0, +v || 0);
+    save(); renderEvResult();
+  }
+  else if (t.id === 'deArr' || t.id === 'deIdx') updateDeCur();
+  else if (t.id === 'dcNo') updateDc();
+  else if (t.id === 'fileIn' && t.files && t.files[0]) {
+    const fr = new FileReader();
+    fr.onload = () => importText(String(fr.result));
+    fr.readAsText(t.files[0], 'utf-8');
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'kw') renderGrid();
+  else if (e.target.id === 'q') renderSearch();
+  else if (e.target.id === 'deIdx') updateDeCur();
+});
+/* 絞り込み欄で Enter(iPhone のキーボードの「検索」)を押したとき、1枚に絞れていればそのカードを記録 */
+$('#kw').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const tiles = document.querySelectorAll('#grid .tile:not(.dis)');
+  if (tiles.length === 1) tiles[0].click();
+  else toast(tiles.length ? `${tiles.length}枚あります。カードをタップしてください` : '該当するカードがありません');
+});
+$('#colL').addEventListener('scroll', onColScroll, { passive: true });
+$('#colR').addEventListener('scroll', onColScroll, { passive: true });
+window.addEventListener('resize', sizeCols);
+function applyTheme() {
+  const t = resolveTheme(store.ui.theme);
+  document.documentElement.dataset.theme = t;
+  document.querySelector('meta[name="theme-color"]').content = t === 'dark' ? '#8f2a52' : '#e8467c';
+}
+applyTheme();
+if (window.matchMedia) {
+  const mq = matchMedia('(prefers-color-scheme: dark)');
+  const onChange = () => { if ((store.ui.theme || 'auto') === 'auto') applyTheme(); };
+  if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
+}
+document.addEventListener('touchstart', () => {}, { passive: true });   // iPhone で :active の色を効かせる
+
+/* =========================================================
+   動作確認(index.html#selftest で開くと結果を表示。保存はしない)
+   ========================================================= */
+function runSelfTest() {
+  const out = [];
+  const log = (ok, msg) => out.push((ok ? 'OK  ' : 'NG  ') + msg);
+  const set = SETS[firstSetId()];
+  const slotOf = (a, i) => getArr(set, a).slots[i - 1];
+  const rec = (m, side, key) => { const k = splitKey(key); return coreRecord(m, side, k.no, k.star); };
+  const tm = () => { const m = newMachine('test', set.id); return m; };
+  const st = (t) => `${t.confirmed ? '確定' : '未確定'} 配列${t.arrayId} ${t.pos}枚目`;
+  out.push(`データ：${set.id} カード${set.cards.length}枚 配列${set.arrays.length}個`);
+
+  // 1. 配列3の10〜13枚目
+  {
+    const keys = [10, 11, 12, 13].map(i => slotOf(3, i)[0]);
+    const counts = keys.map((_, j) => findMatches(set, keys.slice(0, j + 1).map(k => ({ ...splitKey(k) })), 0).length);
+    const m = tm(); const msgs = keys.map(k => rec(m, 'L', k));
+    const t = m.tubes.L;
+    log(t.confirmed && t.arrayId === 3 && t.pos === 13, `配列3の10〜13枚目 ${keys.join(',')} を入力 → ${st(t)}(候補数の推移 ${counts.join('→')})`);
+    out.push('      メッセージ：' + msgs.join(' / '));
+  }
+  // 2. 複数候補の枠(配列7の9枚目 [E1-77,E1-79] を E1-79 で)
+  {
+    const m = tm();
+    const keys = [6, 7, 8, 9, 10].map(i => i === 9 ? 'E1-79' : slotOf(7, i)[0]);
+    keys.forEach(k => rec(m, 'L', k));
+    const t = m.tubes.L;
+    log(t.confirmed && t.arrayId === 7 && t.pos === 10, `複数候補の枠：配列7の6〜10枚目(9枚目《${slotOf(7, 9).join('/')}》を E1-79 で入力) → ${st(t)}`);
+    const m2 = tm();
+    const keys2 = [67, 68, 69, 70, 71, 72].map(i => i === 70 ? 'E1-45' : i === 69 ? 'E1-62' : slotOf(7, i)[0]);
+    keys2.forEach(k => rec(m2, 'L', k));
+    log(m2.tubes.L.confirmed && m2.tubes.L.arrayId === 7 && m2.tubes.L.pos === 72, `複数候補の枠：配列7の67〜72枚目(69枚目《E1-60/E1-62》→E1-62、70枚目《29種》→E1-45) → ${st(m2.tubes.L)}`);
+    // 確定後に複数候補の枠を通過しても警告が出ないか
+    const m3 = tm(); coreConfirm(m3, 'L', 7, 8); const msg = rec(m3, 'L', 'E1-77');
+    log(!msg.startsWith('⚠') && m3.tubes.L.pos === 9 && mismatches(m3, 'L').length === 0, `確定後(配列7の8枚目)に E1-77 を記録 → 9枚目・警告なし「${msg}」`);
+  }
+  // 3. ★
+  {
+    const m = tm();
+    const keys = [20, 21, 22, 23].map(i => slotOf(1, i)[0]);
+    keys.forEach(k => rec(m, 'L', k));
+    const t = m.tubes.L;
+    log(t.confirmed && t.arrayId === 1 && t.pos === 23, `★：配列1の20〜23枚目(${keys.join(',')}) → ${st(t)}`);
+    const ents = keys.map(k => ({ no: splitKey(k).no, star: false }));
+    const ex = findMatches(set, ents, 0);
+    log(!ex.some(c => c.arrayId === 1 && c.end === 23), `★なしの E1-35 で入力すると配列1の23枚目は完全一致にならない(完全一致 ${ex.length}件)`);
+    const near = findMatches(set, ents, 1);
+    log(near.some(c => c.arrayId === 1 && c.end === 23 && c.mis === 1), '　→ 近い候補(1枚違い)には配列1の23枚目が出る');
+    const m2 = tm(); coreConfirm(m2, 'R', 8, 21); const msg = rec(m2, 'R', 'E1-34★');
+    log(!msg.startsWith('⚠'), `確定後に配列8の22枚目《★4種》へ E1-34★ を記録 → 警告なし「${msg}」`);
+    const nx = nextInfo(set, getArr(set, 1), 0);
+    log(nx.star && nx.star.at === 22 && nx.star.d === 22, `配列1の0枚目から「★まで」= あと${nx.star && nx.star.d}(22枚目)、PRまで あと${nx.PR && nx.PR.d}(${nx.PR && nx.PR.at}枚目)、ERまで あと${nx.ER && nx.ER.d}(${nx.ER && nx.ER.at}枚目)`);
+  }
+  // 4. 100枚目 → 次の筒
+  {
+    const m = tm();
+    coreConfirm(m, 'L', 5, 97);
+    [98, 99, 100].forEach(i => rec(m, 'L', slotOf(5, i)[0]));
+    const t = m.tubes.L;
+    const at100 = t.pos === 100 && t.confirmed;
+    const first6 = slotOf(6, 1)[0];
+    const msg = rec(m, 'L', first6);
+    log(at100 && t.cyl === 2 && t.history.length === 1 && t.history[0].arrayId === 5 && t.history[0].pos === 100,
+      `配列5の98〜100枚目のあと ${first6} を記録 → 第${t.cyl}筒に自動切替、前の筒は履歴(配列${t.history[0].arrayId}・${t.history[0].pos}枚目まで・記録${t.history[0].entries.length}件)`);
+    log(t.confirmed && t.arrayId === 6 && t.pos === 1, `　→ 新しい筒は1枚目からの一致を優先：${st(t)}「${msg}」`);
+    const allCands = findMatches(set, [{ no: first6, star: false }], 0).length;
+    out.push(`      (${first6} 1枚だけだと全体では${allCands}か所に一致するが、1枚目から一致するのは配列6だけ)`);
+    // 全配列の1枚目
+    let ok = 0;
+    for (const a of set.arrays) { const mm = tm(); coreNextCyl(mm, 'L'); rec(mm, 'L', a.slots[0][0]); if (mm.tubes.L.confirmed && mm.tubes.L.arrayId === a.id && mm.tubes.L.pos === 1) ok++; }
+    log(ok === set.arrays.length, `新しい筒の1枚目だけで配列が決まる：${ok}/${set.arrays.length}配列`);
+  }
+  // 5. ペアの優先
+  {
+    const m = tm();
+    coreConfirm(m, 'L', 3, 13);
+    const r0 = m.tubes.R.arrayId;
+    rec(m, 'R', 'E1-41');
+    const r = identify(m, 'R');
+    log(r0 === 4 && r.exact.length > 1 && r.exact[0].arrayId === 4 && r.exact.some(c => c.arrayId !== 4),
+      `ペア：左筒が配列3に確定 → 右筒の表示は配列${r0}。右筒に E1-41 → 候補${r.exact.length}件、先頭は配列${r.exact[0].arrayId}の${r.exact[0].end}枚目(ペア以外も${r.exact.filter(c => c.arrayId !== 4).length}件残す)`);
+  }
+  // 6. 番号検索
+  {
+    const qs = ['29', '1-29', 'E1-29', 'e1-29', '２９', '1ー29', '35★'];
+    const res = qs.map(q => { const p = parseCardNo(q, 'E1'); return q + '→' + (p ? p.no + (p.star ? '★' : '') : '×'); });
+    log(qs.slice(0, 6).every(q => parseCardNo(q, 'E1').no === 'E1-29') && parseCardNo('35★', 'E1').star, '番号検索：' + res.join(' '));
+    const ps = positionsOf(set, 'E1-56').map(x => x.a.id + ':' + (x.ps.map(p => p.i).join('/') || 'なし')).join(' ');
+    out.push('      E1-56 の位置：' + ps);
+  }
+  // 7. 見間違い(近い候補)
+  {
+    const m = tm();
+    const keys = [10, 11, 12, 13, 14, 15].map(i => slotOf(3, i)[0]);
+    keys[2] = 'E1-01';
+    const ents = keys.map(k => ({ ...splitKey(k) }));
+    const ex = findMatches(set, ents, 0);
+    keys.forEach(k => { m.tubes.L.entries.push({ ...splitKey(k) }); });
+    const r = identify(m, 'L');
+    log(!ex.length && r.near.length && r.near[0].arrayId === 3 && r.near[0].end === 15, `見間違い：配列3の10〜15枚目のうち12枚目を E1-01 にすると完全一致0件、近い候補の先頭は配列${r.near[0] && r.near[0].arrayId}の${r.near[0] && r.near[0].end}枚目`);
+  }
+  // 8. 取り消し前提の操作：−1/＋1、不明カード
+  {
+    const m = tm();
+    rec(m, 'L', slotOf(3, 10)[0]); coreStep(m, 'L', 1); rec(m, 'L', slotOf(3, 12)[0]); rec(m, 'L', slotOf(3, 13)[0]);
+    const t = m.tubes.L;
+    log(t.confirmed && t.arrayId === 3 && t.pos === 13, `不明な1枚(＋1)をはさむ：配列3の10、?、12、13 → ${st(t)}`);
+    coreStep(m, 'L', -1);
+    log(t.pos === 12, `確定後の −1 → 目印${t.pos}枚目`);
+  }
+  // 8b. 期待値の試行(配列1の0枚目から。★は22枚目。右は未確定。全員20枚ずつ、偏りなし)
+  {
+    const m = tm(); coreConfirm(m, 'L', 1, 0);
+    m.ev = { max: 20, cost: 100, mixMax: 100, mixGood: 0, mixOne: 0, streak: 0.5, mine: 'max', people: 5 };
+    const rs = simulateEV(m, 4000);
+    const best = rs.reduce((b, r) => (r.p > b.p ? r : b), rs[0]);
+    const sum = rs.reduce((s, r) => s + r.p, 0);
+    log(best.k === 2 && Math.abs(sum - 1) < 0.05, `期待値：★が左筒の22枚目(平均44プレイ目)・全員20枚 → いちばん当たるのは前に${best.k}人(${Math.round(best.p * 100)}%)、確率の合計 ${sum.toFixed(2)}。人ごと：${rs.map(r => Math.round(r.p * 100) + '%').join(' / ')}`);
+    m.ev.streak = 0.8;
+    const rs2 = simulateEV(m, 4000);
+    out.push(`      偏り強め(80%で同じ筒)：${rs2.map(r => Math.round(r.p * 100) + '%').join(' / ')}`);
+  }
+  // 9. 全件：どこから入れても正しい答えが候補に残り、何枚で1つに決まるか
+  {
+    let wrong = 0, notU = 0, total = 0;
+    const hist = {};
+    for (const a of set.arrays) {
+      for (let s = 1; s <= a.slots.length - 9; s++) {
+        total++;
+        const ents = []; let got = null;
+        for (let i = s; i <= a.slots.length && ents.length < 20; i++) {
+          ents.push({ ...splitKey(a.slots[i - 1][a.slots[i - 1].length - 1]) });
+          const ex = findMatches(set, ents, 0);
+          if (!ex.some(c => c.arrayId === a.id && c.end === i)) { wrong++; break; }
+          if (ex.length === 1) { got = ents.length; break; }
+        }
+        if (got == null) notU++; else hist[got] = (hist[got] || 0) + 1;
+      }
+    }
+    log(wrong === 0, `全${total}か所(各配列の1〜91枚目から入力開始)：正しい答えが候補から消えた件数 ${wrong}`);
+    const ks = Object.keys(hist).map(Number).sort((a, b) => a - b);
+    let cum = 0;
+    out.push('      1つに決まるまでの枚数：' + ks.map(k => { cum += hist[k]; return `${k}枚で${hist[k]}件(累計${Math.round(cum / total * 100)}%)`; }).join('、') + (notU ? `、決まらず${notU}件` : ''));
+  }
+  return out.join('\n');
+}
+if (location.hash === '#selftest') {
+  document.body.insertAdjacentHTML('afterbegin', '<pre id="selftest">' + esc(runSelfTest()) + '</pre>');
+}
+
+/* =========================================================
+   暗号化した配列データ(サーバー用)
+   パスワード → PBKDF2-SHA256 で鍵 → AES-GCM で復号。「この端末に記憶」なら鍵だけを保存する(パスワードは保存しない)
+   ========================================================= */
+const ENC = parseJSON(document.getElementById('enc-data').textContent);
+const LS_ENCKEY = 'aikatsuHairetsu.enckey.v1';
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const b64e = u8 => { let s = ''; u8.forEach(b => { s += String.fromCharCode(b); }); return btoa(s); };
+const hasSubtle = () => !!(window.crypto && crypto.subtle);
+async function deriveRaw(pass) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: b64d(ENC.salt), iterations: ENC.iter, hash: 'SHA-256' }, base, 256));
+}
+async function decryptRaw(raw) {
+  const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(ENC.iv) }, key, b64d(ENC.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+function useDecrypted(d) {
+  BUILTIN.sets = Array.isArray(d.sets) ? d.sets : [];
+  buildSets(); lastGridKey = ''; evFormFor = null;
+  store.machines.forEach(fixMachine);
+}
+function showUnlock() {
+  document.body.classList.add('nodata');
+  document.body.insertAdjacentHTML('beforeend', `<div id="nodataBox" class="box">
+    <h3>パスワードを入れてください</h3>
+    <p style="font-size:14px;line-height:1.6">配列データはパスワードで暗号化してあります。設定したパスワードを入れると使えるようになります。</p>
+    <form id="unlockForm" autocomplete="on" onsubmit="return false">
+      <input type="text" name="username" value="aikatsu-hairetsu" autocomplete="username" hidden>
+      <input id="unlockPw" type="password" autocomplete="current-password" placeholder="パスワード" style="width:100%;height:46px;border:2px solid var(--line);border-radius:10px;padding:0 12px;background:var(--surface)">
+      <label style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:14px"><input id="unlockRemember" type="checkbox" checked style="width:22px;height:22px"> この端末に記憶する(次から入力しなくてよい)</label>
+      <div class="btnrow"><button class="btn pri" id="unlockBtn" type="submit" data-act="unlock">開く</button></div>
+    </form>
+    <p class="hint">${hasSubtle() ? '' : '<b style="color:var(--ng)">この開き方(https でないアドレス)では暗号を解けません。https のアドレスで開いてください。</b><br>'}手元に配列データのファイルがあるときは、<a href="#" data-act="import">ファイルから読み込む</a>こともできます。</p>
+    <p class="hint">iPhone の Safari は、7日間開かなかったサイトの保存データを消すことがあります。共有ボタンから「ホーム画面に追加」して使うと安心です。</p>
+  </div>`);
+  setTimeout(() => { const el = $('#unlockPw'); if (el) el.focus(); }, 100);
+}
+ACT.unlock = async () => {
+  const pw = $('#unlockPw').value;
+  if (!pw) { toast('パスワードを入れてください'); return; }
+  if (!hasSubtle()) { toast('https のアドレスで開いてください'); return; }
+  const btn = $('#unlockBtn'); btn.disabled = true; btn.textContent = '確認中…';
+  try {
+    const raw = await deriveRaw(pw);
+    const d = await decryptRaw(raw);
+    if ($('#unlockRemember').checked) lsSet(LS_ENCKEY, b64e(raw));
+    $('#nodataBox').remove(); document.body.classList.remove('nodata');
+    useDecrypted(d); start(); toast('配列データを開きました');
+  } catch (e) {
+    btn.disabled = false; btn.textContent = '開く';
+    toast('パスワードが違います');
+  }
+};
+ACT.forgetkey = () => {
+  if (!confirm('この端末に記憶したパスワード(鍵)を消します。次に開くときにパスワードを入れ直します。よろしいですか？')) return;
+  try { localStorage.removeItem(LS_ENCKEY); } catch (e) { }
+  location.reload();
+};
+
+/* 起動 */
+function showNoData() {
+  /* 配列データなし：データを読み込む画面だけ出す。データはこの端末の中だけに保存される */
+  document.body.classList.add('nodata');
+  document.body.insertAdjacentHTML('beforeend', `<div id="nodataBox" class="box">
+    <h3>配列データを読み込んでください</h3>
+    <p style="font-size:14px;line-height:1.6">このアプリには配列データが入っていません。手元の配列データのファイル(例：aikatsu_e1_data.json)を読み込むと使えるようになります。読み込んだデータはこの端末の中だけに保存され、サーバーには送られません。</p>
+    <div class="btnrow"><button class="btn pri" data-act="import">配列データを読み込む</button></div>
+    <p class="hint">前の記録(バックアップのファイル)があれば、配列データの前でも後でも読み込めます。</p>
+    <p class="hint">iPhone の Safari は、7日間開かなかったサイトの保存データを消すことがあります。共有ボタンから「ホーム画面に追加」して使うと安心です。</p>
+  </div>`);
+}
+function start() {
+  if (!Object.keys(SETS).length) { showNoData(); return; }
+  render(true);
+  if (store.ui.tab === 'table') requestAnimationFrame(() => { sizeCols(); jumpToMarker(store.ui.sync ? store.ui.side : null); ACT.jump(); });
+}
+async function boot() {
+  // 埋め込みデータも読み込んだデータもなく、暗号化データがあるときだけパスワードを使う
+  if (!Object.keys(SETS).length && ENC && ENC.ct) {
+    const saved = lsGet(LS_ENCKEY);
+    if (saved && hasSubtle()) {
+      try { useDecrypted(await decryptRaw(b64d(saved))); start(); return; } catch (e) { /* パスワードが変わった：入れ直し */ }
+    }
+    showUnlock();
+    return;
+  }
+  start();
+}
+boot();
+/* オフライン対応(サーバーに置いた https の版だけ。127.0.0.1 は動作確認用) */
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === '127.0.0.1')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

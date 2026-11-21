@@ -1,0 +1,13 @@
+{
+  "name": "アイカツ!アンコール 配列トラッカー",
+  "short_name": "アイカツ配列",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f2f7",
+  "theme_color": "#e8467c",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
